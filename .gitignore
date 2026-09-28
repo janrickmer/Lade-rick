@@ -1,0 +1,6 @@
+node_modules/
+tests/e2e/__screenshots__/
+data/prices.json
+.DS_Store
+*.log
+tests/fixtures/*.json

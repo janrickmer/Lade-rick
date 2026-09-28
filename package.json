@@ -1,0 +1,21 @@
+{
+  "name": "laderick",
+  "version": "0.1.0",
+  "description": "LadeRick – Börsenstrompreis Deutschland (Day-Ahead, DE-LU) als Chart, mit Berechnung des günstigsten 4-Stunden-Fensters der letzten 36 Stunden.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node scripts/serve.js",
+    "test": "node --test tests/unit",
+    "test:e2e": "node tests/e2e/run.js",
+    "test:all": "npm test && npm run test:e2e",
+    "snapshot": "node scripts/fetch-snapshot.js"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  },
+  "license": "MIT"
+}
