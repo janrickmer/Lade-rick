@@ -136,6 +136,22 @@ test('SMARD: nur die Wochendateien im Zielbereich werden geladen (max. 3)', asyn
   assert.ok(log.length <= 4);
 });
 
+test('SMARD: fehlende neueste Wochendatei (404) wird übersprungen, ältere Datei wird genutzt', async () => {
+  const [oldTs, newTs] = set.smardIndex.timestamps;
+  const routes = [
+    { match: (u) => u.endsWith('/index_quarterhour.json'), json: set.smardIndex },
+    { match: (u) => u.endsWith(`/4169_DE_quarterhour_${oldTs}.json`), json: set.smardFiles[oldTs] },
+    { match: (u) => u.endsWith(`/4169_DE_quarterhour_${newTs}.json`), status: 404 },
+  ];
+  const series = await fetchSmard({ now: NOW, fetchImpl: makeFetch(routes) });
+  assert.equal(series.resolutionMinutes, 15);
+  assert.ok(series.points.length > 0 && series.points.length < set.points.length);
+  // alle Dateien 404 → Fehler (und Fallback auf hour wird versucht)
+  const log = [];
+  await assert.rejects(fetchSmard({ now: NOW, fetchImpl: makeFetch([{ match: (u) => u.includes('index_'), json: set.smardIndex }, { match: () => true, status: 404 }], log) }), (e) => e.kind === 'http');
+  assert.ok(log.some((u) => u.includes('index_hour.json')));
+});
+
 // ---------- aWATTar ----------
 
 test('aWATTar: Antwort wird umgesetzt, Zeitfenster als Millisekunden in der URL', async () => {

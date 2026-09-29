@@ -211,9 +211,18 @@ export async function fetchSmard({ now, fetchImpl, timeoutMs, signal, apiBase = 
       const files = relevant.length ? relevant : stamps.slice(-2);
       const resMin = resolution === 'quarterhour' ? 15 : 60;
       const raw = [];
+      let loadedFiles = 0;
       for (const ts of files) {
-        const data = await getJson(`${base}/${SMARD_FILTER}_${SMARD_REGION}_${resolution}_${ts}.json`, { fetchImpl, timeoutMs, signal, sourceId: id });
+        let data;
+        try {
+          data = await getJson(`${base}/${SMARD_FILTER}_${SMARD_REGION}_${resolution}_${ts}.json`, { fetchImpl, timeoutMs, signal, sourceId: id });
+        } catch (err) {
+          // Eine noch nicht vorhandene Wochendatei (404) ist normal, z. B. direkt nach Wochenbeginn.
+          if (err instanceof SourceError && err.kind === 'http' && err.status === 404) continue;
+          throw err;
+        }
         if (!data || !Array.isArray(data.series)) throw new SourceError(id, 'Unerwartetes Antwortformat (series fehlt)', { kind: 'format' });
+        loadedFiles += 1;
         for (const entry of data.series) {
           if (!Array.isArray(entry) || entry.length < 2) continue;
           const [start, value] = entry;
@@ -221,6 +230,7 @@ export async function fetchSmard({ now, fetchImpl, timeoutMs, signal, apiBase = 
           raw.push({ start: Number(start), end: Number(start) + resMin * MINUTE, price: Number(value) });
         }
       }
+      if (!loadedFiles) throw new SourceError(id, `Keine Datendatei gefunden (${resolution})`, { status: 404, kind: 'http' });
       const inRange = raw.filter((p) => p.end > from && p.start < to);
       if (!inRange.length) throw new SourceError(id, `Keine Werte im Zielbereich (${resolution})`, { kind: 'empty' });
       return buildSeries(id, raw, { now, resolutionMinutes: resMin });

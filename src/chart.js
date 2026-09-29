@@ -129,10 +129,16 @@ export class PriceChart {
    *           range?:{start:number,end:number}, resolutionMinutes:number }} state
    */
   update(state) {
+    const keepTs = this.selected >= 0 && this.visible[this.selected] ? this.visible[this.selected].start : null;
+    const keepPinned = this.pinned;
     this.state = state;
     this.selected = -1;
     this.pinned = false;
     this.render();
+    if (keepTs !== null) {
+      const i = this.visible.findIndex((p) => p.start === keepTs);
+      if (i >= 0) { this.select(i); this.pinned = keepPinned; }
+    }
   }
 
   destroy() {
