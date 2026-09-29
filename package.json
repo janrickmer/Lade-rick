@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "node scripts/serve.js",
-    "test": "node --test tests/unit",
+    "test": "node --test \"tests/unit/**/*.test.js\"",
     "test:e2e": "node tests/e2e/run.js",
     "test:all": "npm test && npm run test:e2e",
     "snapshot": "node scripts/fetch-snapshot.js"
