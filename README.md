@@ -89,11 +89,19 @@ Die Seite braucht keinen Build-Schritt; ES-Module benötigen aber einen HTTP-Ser
 
 ## Betrieb
 
-**GitHub Pages:** In den Repository-Einstellungen unter *Pages* als Quelle „GitHub Actions“ wählen. Der
-Workflow `.github/workflows/pages.yml` veröffentlicht die Seite bei jedem Push auf den Standard-Branch und zusätzlich
+**GitHub Pages mit eigener Domain (https://laderick.janrickmer.de):**
+
+1. DNS beim Anbieter von `janrickmer.de`: `CNAME laderick → janrickmer.github.io` (bereits eingerichtet).
+2. Repository → *Settings → Pages*: unter „Build and deployment“ als Source **GitHub Actions** wählen.
+3. Auf derselben Seite unter „Custom domain“ `laderick.janrickmer.de` eintragen und speichern. GitHub prüft den
+   DNS-Eintrag und stellt innerhalb von etwa einer Stunde ein TLS-Zertifikat aus; danach „Enforce HTTPS“ aktivieren.
+4. Unter *Actions → GitHub Pages* den Workflow einmal starten („Run workflow“) oder den nächsten Push abwarten.
+
+Der Workflow `.github/workflows/pages.yml` veröffentlicht die Seite bei jedem Push auf den Standard-Branch und zusätzlich
 stündlich; dabei erzeugt er serverseitig `data/prices.json` als Fallback, falls der Browser die Quellen nicht
 direkt erreichen kann (z. B. fehlende CORS-Freigabe oder Ausfall). Ohne diesen Snapshot funktioniert die Seite
-ebenfalls, solange mindestens eine Quelle direkt erreichbar ist.
+ebenfalls, solange mindestens eine Quelle direkt erreichbar ist. Bei einer Veröffentlichung per GitHub Actions wird die
+Domain ausschließlich über die Pages-Einstellungen gesetzt; eine `CNAME`-Datei im Repository ist dafür nicht nötig.
 
 **Anderer statischer Host:** Die Dateien `index.html`, `assets/`, `src/` (und optional `data/prices.json`)
 genügen. Die Content-Security-Policy in `index.html` erlaubt Verbindungen nur zu den drei Quellen.
