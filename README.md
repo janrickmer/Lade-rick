@@ -53,8 +53,10 @@ Zwischenspeicher fangen CORS-Blockaden ab (siehe Abschnitt *Betrieb*).
 3. Nur lückenlose Fenster zählen; gibt es keines, wird das beste Fenster mit ≥ 75 % Abdeckung als Näherung
    gekennzeichnet. Gleichstand → früheres Fenster.
 4. Der Ausblick verwendet dieselbe Rechnung für Fenster, die noch nicht begonnen haben (Start frühestens zur nächsten
-   vollen Viertelstunde), ohne Näherungs-Fallback. Nur dieses kommende Fenster wird im Diagramm grün markiert; die
-   Seite rechnet an jeder Viertelstundengrenze neu, sodass ein gerade beginnendes Fenster sofort ersetzt wird.
+   vollen Viertelstunde, immer echt nach „jetzt“), ohne Näherungs-Fallback. Nur dieses kommende Fenster wird im
+   Diagramm grün markiert. Die Seite rechnet kurz vor jeder Viertelstundengrenze für diese Grenze neu, sodass ein
+   beginnendes Fenster schon vor seinem Start ersetzt wird; ein Sekunden-Wächter rechnet zusätzlich sofort neu, wenn die
+   Systemuhr springt (Standby, Zeitkorrektur) oder das angezeigte Fenster begonnen hat. Grundlage ist die Uhr des Geräts.
 
 Die Logik liegt in `src/analysis.js` und ist vollständig durch Unit-Tests abgedeckt (u. a. Zeitumstellung,
 Datenlücken, gemischte Auflösung 15/60 min, negative Preise, Duplikate aus SMARD-Wochendateien).
