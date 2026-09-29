@@ -95,6 +95,23 @@
       </details>
     </section>
 
+    <article id="outlook" class="card card-outlook" aria-labelledby="outlook-title" data-state="loading">
+      <p class="pill pill-future" data-field="pill">Kommend</p>
+      <h2 id="outlook-title" class="card-title">Günstigstes 4-Stunden-Fenster<span class="sr-only"> (kommend)</span></h2>
+      <p class="hero-overline" data-field="day">&nbsp;</p>
+      <p class="hero-time" data-field="time">&nbsp;</p>
+      <p class="hero-price">
+        <span class="hero-price-label"><span aria-hidden="true">Ø</span><span class="sr-only">Durchschnitt</span> ca.</span>
+        <strong class="hero-ct" data-field="ct">&nbsp;</strong>
+        <span class="hero-mwh muted" data-field="mwh"></span>
+      </p>
+      <p class="hero-flags" data-field="flags"></p>
+      <p class="hero-meta muted" data-field="note"></p>
+      <p class="hero-meta muted" data-field="starts"></p>
+      <p class="hero-empty" data-field="empty" hidden></p>
+      <p class="footnote muted">Feste, bereits veröffentlichte Börsenpreise – keine Prognose. Kann das laufende Zeitfenster einschließen.</p>
+    </article>
+
     <article id="start-time" class="card card-orange" aria-labelledby="start-time-title" data-state="loading">
       <h2 id="start-time-title" class="card-title">Empfehlung: beste Startzeit für eine 4-Stunden-Ladung</h2>
       <p class="start-lead">Gemessen an den Strompreisen der vergangenen <span data-field="hours">72</span> Stunden haben Sie
@@ -113,43 +130,24 @@
         Reiner Börsenpreis ohne Netzentgelte, Steuern, Umlagen und MwSt.</p>
     </article>
 
-    <section class="hero-grid" aria-label="Günstigste Zeitfenster">
-      <article id="hero" class="card card-hero" aria-labelledby="hero-title" data-state="loading">
-        <p class="pill pill-past">Vergangen · letzte 72 Stunden</p>
-        <h2 id="hero-title" class="card-title">Günstigstes 4-Stunden-Fenster<span class="sr-only"> der letzten 72 Stunden</span></h2>
-        <p class="hero-overline" data-field="day">&nbsp;</p>
-        <p class="hero-time" data-field="time">&nbsp;</p>
-        <p class="hero-price">
-          <span class="hero-price-label"><span aria-hidden="true">Ø</span><span class="sr-only">Durchschnitt</span> ca.</span>
-          <strong class="hero-ct" data-field="ct">&nbsp;</strong>
-          <span class="hero-mwh muted" data-field="mwh"></span>
-        </p>
-        <p class="hero-compare" data-field="compare"></p>
-        <p class="hero-flags" data-field="flags"></p>
-        <p class="hero-meta muted" data-field="note"></p>
-        <p class="hero-meta muted" data-field="ended"></p>
-        <p class="hero-meta muted" data-field="range"></p>
-        <p class="hero-empty" data-field="empty" hidden></p>
-        <p class="footnote muted">Reiner Börsenpreis ohne Netzentgelte, Steuern, Umlagen und MwSt. – der Haushaltspreis liegt deutlich höher.</p>
-      </article>
-
-      <article id="outlook" class="card card-outlook" aria-labelledby="outlook-title" data-state="loading">
-        <p class="pill pill-future" data-field="pill">Kommend</p>
-        <h2 id="outlook-title" class="card-title">Günstigstes 4-Stunden-Fenster<span class="sr-only"> (kommend)</span></h2>
-        <p class="hero-overline" data-field="day">&nbsp;</p>
-        <p class="hero-time hero-time-small" data-field="time">&nbsp;</p>
-        <p class="hero-price hero-price-small">
-          <span class="hero-price-label"><span aria-hidden="true">Ø</span><span class="sr-only">Durchschnitt</span> ca.</span>
-          <strong class="hero-ct" data-field="ct">&nbsp;</strong>
-          <span class="hero-mwh muted" data-field="mwh"></span>
-        </p>
-        <p class="hero-flags" data-field="flags"></p>
-        <p class="hero-meta muted" data-field="note"></p>
-        <p class="hero-meta muted" data-field="starts"></p>
-        <p class="hero-empty" data-field="empty" hidden></p>
-        <p class="footnote muted">Feste, bereits veröffentlichte Börsenpreise – keine Prognose. Kann das laufende Zeitfenster einschließen.</p>
-      </article>
-    </section>
+    <article id="hero" class="card card-hero" aria-labelledby="hero-title" data-state="loading">
+      <p class="pill pill-past">Vergangen · letzte 72 Stunden</p>
+      <h2 id="hero-title" class="card-title">Günstigstes 4-Stunden-Fenster<span class="sr-only"> der letzten 72 Stunden</span></h2>
+      <p class="hero-overline" data-field="day">&nbsp;</p>
+      <p class="hero-time" data-field="time">&nbsp;</p>
+      <p class="hero-price">
+        <span class="hero-price-label"><span aria-hidden="true">Ø</span><span class="sr-only">Durchschnitt</span> ca.</span>
+        <strong class="hero-ct" data-field="ct">&nbsp;</strong>
+        <span class="hero-mwh muted" data-field="mwh"></span>
+      </p>
+      <p class="hero-compare" data-field="compare"></p>
+      <p class="hero-flags" data-field="flags"></p>
+      <p class="hero-meta muted" data-field="note"></p>
+      <p class="hero-meta muted" data-field="ended"></p>
+      <p class="hero-meta muted" data-field="range"></p>
+      <p class="hero-empty" data-field="empty" hidden></p>
+      <p class="footnote muted">Reiner Börsenpreis ohne Netzentgelte, Steuern, Umlagen und MwSt. – der Haushaltspreis liegt deutlich höher.</p>
+    </article>
 
     <section class="kpis" aria-label="Kennzahlen">
       <div class="tile tile-current" id="kpi-current" data-state="loading">
@@ -215,97 +213,104 @@
         Erzeuger zahlen für die Abnahme. In dynamischen Tarifen wird der Börsenanteil dann je nach Tarif gutgeschrieben oder
         auf null begrenzt; die festen Bestandteile bleiben.</p>
 
-      <h3 id="quellen">Datenquellen</h3>
-      <p>LadeRick greift ausschließlich auf öffentliche, regelmäßig aktualisierte Quellen zu. Die erste erreichbare Quelle mit
-        ausreichend Daten wird verwendet; welche das ist, steht in der Statuszeile unter dem Diagramm.</p>
-      <ol class="source-list">
-        <li><strong><a href="https://www.smard.de/" rel="noopener">SMARD.de</a></strong> – Strommarktdaten der Bundesnetzagentur.
-          Großhandelspreise Deutschland/Luxemburg, Lizenz
-          <a href="https://creativecommons.org/licenses/by/4.0/deed.de" rel="noopener">CC&nbsp;BY&nbsp;4.0</a>.
-          Quellenangabe: „Bundesnetzagentur | SMARD.de“.</li>
-        <li><strong><a href="https://www.energy-charts.info/" rel="noopener">Energy-Charts</a></strong> – Datenplattform des
-          Fraunhofer-Instituts für Solare Energiesysteme ISE. Die DE-LU-Preise werden dort unverändert von SMARD.de übernommen
-          (Lizenz CC&nbsp;BY&nbsp;4.0, Quellenangabe „Bundesnetzagentur | SMARD.de via energy-charts.info (Fraunhofer ISE)“).</li>
-        <li><strong><a href="https://www.awattar.de/" rel="noopener">aWATTar</a></strong> – öffentliche Marktdaten-Schnittstelle des
-          Stromanbieters aWATTar GmbH mit den EPEX-SPOT-Day-Ahead-Preisen für Deutschland (reiner Börsenpreis ohne Aufschlag).</li>
-        <li><strong>Zwischenspeicher</strong> – falls keine Quelle direkt erreichbar ist, wird eine serverseitig erstellte Kopie der
-          letzten Daten angezeigt und als solche gekennzeichnet.</li>
-      </ol>
-      <p>Die Seite ruft die Daten beim Öffnen ab – wurde sie innerhalb der letzten 10 Minuten bereits geladen, zunächst aus
-        dem lokalen Speicher des Browsers – und aktualisiert sie danach automatisch jede Stunde sowie beim Zurückkehren in
-        den Tab, wenn der letzte Abruf länger als 10 Minuten zurückliegt. Der serverseitige Zwischenspeicher wird ebenfalls
-        stündlich erneuert.</p>
-
+      <details class="info-details" id="quellen">
+        <summary><h3>Datenquellen</h3></summary>
+        <p>LadeRick greift ausschließlich auf öffentliche, regelmäßig aktualisierte Quellen zu. Die erste erreichbare Quelle mit
+          ausreichend Daten wird verwendet; welche das ist, steht in der Statuszeile unter den Kennzahlen.</p>
+        <ol class="source-list">
+          <li><strong><a href="https://www.smard.de/" rel="noopener">SMARD.de</a></strong> – Strommarktdaten der Bundesnetzagentur.
+            Großhandelspreise Deutschland/Luxemburg, Lizenz
+            <a href="https://creativecommons.org/licenses/by/4.0/deed.de" rel="noopener">CC&nbsp;BY&nbsp;4.0</a>.
+            Quellenangabe: „Bundesnetzagentur | SMARD.de“.</li>
+          <li><strong><a href="https://www.energy-charts.info/" rel="noopener">Energy-Charts</a></strong> – Datenplattform des
+            Fraunhofer-Instituts für Solare Energiesysteme ISE. Die DE-LU-Preise werden dort unverändert von SMARD.de übernommen
+            (Lizenz CC&nbsp;BY&nbsp;4.0, Quellenangabe „Bundesnetzagentur | SMARD.de via energy-charts.info (Fraunhofer ISE)“).</li>
+          <li><strong><a href="https://www.awattar.de/" rel="noopener">aWATTar</a></strong> – öffentliche Marktdaten-Schnittstelle des
+            Stromanbieters aWATTar GmbH mit den EPEX-SPOT-Day-Ahead-Preisen für Deutschland (reiner Börsenpreis ohne Aufschlag).</li>
+          <li><strong>Zwischenspeicher</strong> – falls keine Quelle direkt erreichbar ist, wird eine serverseitig erstellte Kopie der
+            letzten Daten angezeigt und als solche gekennzeichnet.</li>
+        </ol>
+        <p>Die Seite ruft die Daten beim Öffnen ab – wurde sie innerhalb der letzten 10 Minuten bereits geladen, zunächst aus
+          dem lokalen Speicher des Browsers – und aktualisiert sie danach automatisch jede Stunde sowie beim Zurückkehren in
+          den Tab, wenn der letzte Abruf länger als 10 Minuten zurückliegt. Der serverseitige Zwischenspeicher wird ebenfalls
+          stündlich erneuert.</p>
+      </details>
     </section>
 
     <section class="card card-info" id="rechtliches" aria-labelledby="legal-title">
       <h2 id="legal-title" class="card-title">Rechtliches</h2>
 
-      <h3 id="impressum">Impressum</h3>
-      <p>Angaben gemäß §&nbsp;5 DDG (Digitale-Dienste-Gesetz). LadeRick wird angeboten von:</p>
-      <address class="imprint">
-        Jan-Rickmer Feindt<br>
-        An der Bauna 30<br>
-        34270 Schauenburg<br>
-        Deutschland<br>
-        E-Mail: <a href="mailto:feindt+ladeRick@janrickmer.de">feindt+ladeRick@janrickmer.de</a>
-      </address>
-      <p>Inhaltlich verantwortlich (§&nbsp;18 Abs.&nbsp;2 MStV): Jan-Rickmer Feindt, Anschrift wie oben.</p>
+      <details class="info-details" id="impressum">
+        <summary><h3>Impressum</h3></summary>
+        <p>Angaben gemäß §&nbsp;5 DDG (Digitale-Dienste-Gesetz). LadeRick wird angeboten von:</p>
+        <address class="imprint">
+          Jan-Rickmer Feindt<br>
+          An der Bauna 30<br>
+          34270 Schauenburg<br>
+          Deutschland<br>
+          E-Mail: <a href="mailto:feindt+ladeRick@janrickmer.de">feindt+ladeRick@janrickmer.de</a>
+        </address>
+        <p>Inhaltlich verantwortlich (§&nbsp;18 Abs.&nbsp;2 MStV): Jan-Rickmer Feindt, Anschrift wie oben.</p>
+      </details>
 
-      <h3 id="datenschutz">Datenschutz</h3>
-      <p>Verantwortlich im Sinne der Datenschutz-Grundverordnung (DSGVO) ist Jan-Rickmer Feindt, An der Bauna 30,
-        34270 Schauenburg (Kontaktdaten siehe <a href="#impressum">Impressum</a>).</p>
-      <p>LadeRick benötigt keine Anmeldung, setzt keine Cookies und verwendet kein Tracking. Der Betreiber selbst erhebt,
-        speichert und wertet keine personenbezogenen Daten der Besucherinnen und Besucher aus.</p>
-      <p><strong>Hosting.</strong> Die Seite wird über GitHub Pages ausgeliefert, einen Dienst der GitHub, Inc.,
-        88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA. Beim Aufruf erhält GitHub technisch bedingt die
-        IP-Adresse Ihres Browsers und kann sie zusammen mit weiteren Zugriffsdaten (Zeitpunkt, aufgerufene Datei,
-        Browsertyp) in Server-Protokollen speichern; der Betreiber von LadeRick erhält diese Protokolle nicht. Die Daten
-        werden damit in die USA übermittelt. GitHub, Inc. ist nach eigenen Angaben nach dem EU-U.S. Data Privacy Framework
-        zertifiziert, für das ein Angemessenheitsbeschluss der EU-Kommission vom 10.&nbsp;Juli&nbsp;2023 gilt
-        (Art.&nbsp;45 DSGVO). Einzelheiten, auch zur Speicherdauer, stehen in der
-        <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" rel="noopener">Datenschutzerklärung von GitHub</a>.</p>
-      <p><strong>Preisdaten.</strong> Die Preisdaten ruft Ihr Browser direkt bei den unter <a href="#quellen">Datenquellen</a>
-        genannten Anbietern ab, nacheinander in der dort genannten Reihenfolge, bis eine Quelle ausreichend Daten liefert;
-        in der Regel wird also nur SMARD.de angefragt. Der jeweils angefragte Anbieter (Bundesnetzagentur, Fraunhofer ISE
-        oder aWATTar GmbH) erhält dabei technisch bedingt die IP-Adresse Ihres Browsers und den angefragten Zeitraum, sonst
-        nichts; die Speicherdauer richtet sich nach den Datenschutzhinweisen des jeweiligen Anbieters. Der Zwischenspeicher
-        ist eine Datei auf demselben Server wie diese Seite und enthält ausschließlich Preisdaten.</p>
-      <p><strong>Zweck und Rechtsgrundlage.</strong> Zweck dieser Verarbeitung ist ausschließlich die Auslieferung der Seite
-        und die Anzeige der Preise. Rechtsgrundlage ist Art.&nbsp;6 Abs.&nbsp;1 lit.&nbsp;f DSGVO; das berechtigte Interesse
-        liegt in der sicheren und zuverlässigen Bereitstellung des Angebots ohne eigenen Server. Die Bereitstellung der
-        IP-Adresse ist weder gesetzlich noch vertraglich vorgeschrieben; ohne sie ist ein Abruf der Seite technisch jedoch
-        nicht möglich.</p>
-      <p><strong>Lokaler Speicher.</strong> Im lokalen Speicher Ihres Browsers (localStorage) legt LadeRick drei Einträge ab,
-        die weder an den Betreiber noch an Dritte übertragen werden: die gewählte Darstellung (hell/dunkel; nur, wenn Sie
-        sie umschalten), den gewählten Diagramm-Zeitraum (1 bis 3 Tage) und die zuletzt geladenen Preisdaten samt
-        Abrufstatus. Die Preisdaten werden bis zu 10 Minuten ohne erneuten Abruf wiederverwendet, bei jedem erfolgreichen
-        Abruf überschrieben und beim nächsten Öffnen der Seite verworfen, wenn sie älter als 24 Stunden sind. Darstellung
-        und Zeitraum bleiben gespeichert, bis Sie die Website-Daten in Ihrem Browser löschen. Diese Einträge enthalten keine
-        personenbezogenen Daten und keine Kennungen, mit denen Sie wiedererkannt werden könnten; die Speicherung ist für die
-        von Ihnen gewünschte Funktion erforderlich und bedarf keiner Einwilligung (§&nbsp;25 Abs.&nbsp;2 Nr.&nbsp;2 TDDDG).</p>
-      <p><strong>Ihre Rechte.</strong> Sie haben das Recht auf Auskunft (Art.&nbsp;15 DSGVO), Berichtigung (Art.&nbsp;16),
-        Löschung (Art.&nbsp;17), Einschränkung der Verarbeitung (Art.&nbsp;18) und Datenübertragbarkeit (Art.&nbsp;20) sowie
-        das Recht, sich bei einer Datenschutzaufsichtsbehörde zu beschweren (Art.&nbsp;77 DSGVO); für den Betreiber
-        zuständig ist der Hessische Beauftragte für Datenschutz und Informationsfreiheit. Anfragen richten Sie bitte an die
-        im <a href="#impressum">Impressum</a> genannten Kontaktdaten.</p>
-      <p><strong>Widerspruchsrecht.</strong> Sie haben das Recht, aus Gründen, die sich aus Ihrer besonderen Situation
-        ergeben, jederzeit gegen die Verarbeitung Sie betreffender personenbezogener Daten, die auf Art.&nbsp;6 Abs.&nbsp;1
-        lit.&nbsp;f DSGVO beruht, Widerspruch einzulegen (Art.&nbsp;21 Abs.&nbsp;1 DSGVO).</p>
+      <details class="info-details" id="datenschutz">
+        <summary><h3>Datenschutz</h3></summary>
+        <p>Verantwortlich im Sinne der Datenschutz-Grundverordnung (DSGVO) ist Jan-Rickmer Feindt, An der Bauna 30,
+          34270 Schauenburg (Kontaktdaten siehe <a href="#impressum">Impressum</a>).</p>
+        <p>LadeRick benötigt keine Anmeldung, setzt keine Cookies und verwendet kein Tracking. Der Betreiber selbst erhebt,
+          speichert und wertet keine personenbezogenen Daten der Besucherinnen und Besucher aus.</p>
+        <p><strong>Hosting.</strong> Die Seite wird über GitHub Pages ausgeliefert, einen Dienst der GitHub, Inc.,
+          88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA. Beim Aufruf erhält GitHub technisch bedingt die
+          IP-Adresse Ihres Browsers und kann sie zusammen mit weiteren Zugriffsdaten (Zeitpunkt, aufgerufene Datei,
+          Browsertyp) in Server-Protokollen speichern; der Betreiber von LadeRick erhält diese Protokolle nicht. Die Daten
+          werden damit in die USA übermittelt. GitHub, Inc. ist nach eigenen Angaben nach dem EU-U.S. Data Privacy Framework
+          zertifiziert, für das ein Angemessenheitsbeschluss der EU-Kommission vom 10.&nbsp;Juli&nbsp;2023 gilt
+          (Art.&nbsp;45 DSGVO). Einzelheiten, auch zur Speicherdauer, stehen in der
+          <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" rel="noopener">Datenschutzerklärung von GitHub</a>.</p>
+        <p><strong>Preisdaten.</strong> Die Preisdaten ruft Ihr Browser direkt bei den unter <a href="#quellen">Datenquellen</a>
+          genannten Anbietern ab, nacheinander in der dort genannten Reihenfolge, bis eine Quelle ausreichend Daten liefert;
+          in der Regel wird also nur SMARD.de angefragt. Der jeweils angefragte Anbieter (Bundesnetzagentur, Fraunhofer ISE
+          oder aWATTar GmbH) erhält dabei technisch bedingt die IP-Adresse Ihres Browsers und den angefragten Zeitraum, sonst
+          nichts; die Speicherdauer richtet sich nach den Datenschutzhinweisen des jeweiligen Anbieters. Der Zwischenspeicher
+          ist eine Datei auf demselben Server wie diese Seite und enthält ausschließlich Preisdaten.</p>
+        <p><strong>Zweck und Rechtsgrundlage.</strong> Zweck dieser Verarbeitung ist ausschließlich die Auslieferung der Seite
+          und die Anzeige der Preise. Rechtsgrundlage ist Art.&nbsp;6 Abs.&nbsp;1 lit.&nbsp;f DSGVO; das berechtigte Interesse
+          liegt in der sicheren und zuverlässigen Bereitstellung des Angebots ohne eigenen Server. Die Bereitstellung der
+          IP-Adresse ist weder gesetzlich noch vertraglich vorgeschrieben; ohne sie ist ein Abruf der Seite technisch jedoch
+          nicht möglich.</p>
+        <p><strong>Lokaler Speicher.</strong> Im lokalen Speicher Ihres Browsers (localStorage) legt LadeRick drei Einträge ab,
+          die weder an den Betreiber noch an Dritte übertragen werden: die gewählte Darstellung (hell/dunkel; nur, wenn Sie
+          sie umschalten), den gewählten Diagramm-Zeitraum (1 bis 3 Tage) und die zuletzt geladenen Preisdaten samt
+          Abrufstatus. Die Preisdaten werden bis zu 10 Minuten ohne erneuten Abruf wiederverwendet, bei jedem erfolgreichen
+          Abruf überschrieben und beim nächsten Öffnen der Seite verworfen, wenn sie älter als 24 Stunden sind. Darstellung
+          und Zeitraum bleiben gespeichert, bis Sie die Website-Daten in Ihrem Browser löschen. Diese Einträge enthalten keine
+          personenbezogenen Daten und keine Kennungen, mit denen Sie wiedererkannt werden könnten; die Speicherung ist für die
+          von Ihnen gewünschte Funktion erforderlich und bedarf keiner Einwilligung (§&nbsp;25 Abs.&nbsp;2 Nr.&nbsp;2 TDDDG).</p>
+        <p><strong>Ihre Rechte.</strong> Sie haben das Recht auf Auskunft (Art.&nbsp;15 DSGVO), Berichtigung (Art.&nbsp;16),
+          Löschung (Art.&nbsp;17), Einschränkung der Verarbeitung (Art.&nbsp;18) und Datenübertragbarkeit (Art.&nbsp;20) sowie
+          das Recht, sich bei einer Datenschutzaufsichtsbehörde zu beschweren (Art.&nbsp;77 DSGVO); für den Betreiber
+          zuständig ist der Hessische Beauftragte für Datenschutz und Informationsfreiheit. Anfragen richten Sie bitte an die
+          im <a href="#impressum">Impressum</a> genannten Kontaktdaten.</p>
+        <p><strong>Widerspruchsrecht.</strong> Sie haben das Recht, aus Gründen, die sich aus Ihrer besonderen Situation
+          ergeben, jederzeit gegen die Verarbeitung Sie betreffender personenbezogener Daten, die auf Art.&nbsp;6 Abs.&nbsp;1
+          lit.&nbsp;f DSGVO beruht, Widerspruch einzulegen (Art.&nbsp;21 Abs.&nbsp;1 DSGVO).</p>
+      </details>
 
-      <h3 id="haftung">Haftungsausschluss</h3>
-      <p>Die auf LadeRick angezeigten Preise, Kennzahlen und Berechnungen werden ohne Gewähr bereitgestellt. Sie werden
-        automatisch aus den unter <a href="#quellen">Datenquellen</a> genannten öffentlichen Quellen abgerufen und
-        verarbeitet; dabei können Übertragungs-, Verarbeitungs- oder Anzeigefehler auftreten, und die Daten können
-        verspätet, unvollständig oder veraltet sein. Für die Richtigkeit, Vollständigkeit und Aktualität der angezeigten
-        Informationen wird, soweit gesetzlich zulässig, keine Haftung übernommen; unberührt bleibt die Haftung für Vorsatz
-        und grobe Fahrlässigkeit sowie für Schäden aus der Verletzung von Leben, Körper oder Gesundheit. Entscheidungen, die
-        auf Grundlage dieser Informationen getroffen werden, erfolgen auf eigene Verantwortung.</p>
-      <p><strong>Alle Angaben ohne Gewähr. Bitte prüfen Sie die angezeigten Informationen selbstständig und kritisch, zum
-        Beispiel direkt bei den unter <a href="#quellen">Datenquellen</a> genannten Anbietern oder anhand der
-        Preisinformationen Ihres Stromanbieters.</strong> LadeRick bietet keine Energie-, Rechts- oder Finanzberatung und
-        ersetzt nicht die verbindlichen Angaben Ihres Stromanbieters oder Ihres Stromvertrags.</p>
-      <p>Für die Inhalte verlinkter externer Seiten sind ausschließlich deren Betreiber verantwortlich.</p>
+      <details class="info-details" id="haftung">
+        <summary><h3>Haftungsausschluss</h3></summary>
+        <p>Die auf LadeRick angezeigten Preise, Kennzahlen und Berechnungen werden ohne Gewähr bereitgestellt. Sie werden
+          automatisch aus den unter <a href="#quellen">Datenquellen</a> genannten öffentlichen Quellen abgerufen und
+          verarbeitet; dabei können Übertragungs-, Verarbeitungs- oder Anzeigefehler auftreten, und die Daten können
+          verspätet, unvollständig oder veraltet sein. Für die Richtigkeit, Vollständigkeit und Aktualität der angezeigten
+          Informationen wird, soweit gesetzlich zulässig, keine Haftung übernommen; unberührt bleibt die Haftung für Vorsatz
+          und grobe Fahrlässigkeit sowie für Schäden aus der Verletzung von Leben, Körper oder Gesundheit. Entscheidungen, die
+          auf Grundlage dieser Informationen getroffen werden, erfolgen auf eigene Verantwortung.</p>
+        <p><strong>Alle Angaben ohne Gewähr. Bitte prüfen Sie die angezeigten Informationen selbstständig und kritisch, zum
+          Beispiel direkt bei den unter <a href="#quellen">Datenquellen</a> genannten Anbietern oder anhand der
+          Preisinformationen Ihres Stromanbieters.</strong> LadeRick bietet keine Energie-, Rechts- oder Finanzberatung und
+          ersetzt nicht die verbindlichen Angaben Ihres Stromanbieters oder Ihres Stromvertrags.</p>
+        <p>Für die Inhalte verlinkter externer Seiten sind ausschließlich deren Betreiber verantwortlich.</p>
+      </details>
     </section>
   </main>
 

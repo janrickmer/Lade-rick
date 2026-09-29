@@ -281,7 +281,7 @@ export function setStatusMessage(text) {
 }
 
 /**
- * Statuszeile unter dem Diagramm (nicht aria-live).
+ * Statuszeile unter den Kennzahlen (nicht aria-live).
  * @param {{ series:object, attempts:Array, now:number, knownUntil:number|null, fromCache?:boolean }} p
  */
 export function renderStatusMeta({ series, now, knownUntil }) {

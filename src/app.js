@@ -231,9 +231,39 @@ function toggleTheme() {
   state.chart?.render();
 }
 
+// ---------- Aufklappbare Abschnitte ----------
+
+/** Öffnet eingeklappte Abschnitte (<details>), auf die ein Anker zeigt (#impressum, #datenschutz, #quellen …). */
+function revealTarget(hash, { scroll = false } = {}) {
+  if (!hash || hash.length < 2) return;
+  let el = null;
+  try { el = document.getElementById(decodeURIComponent(hash.slice(1))); } catch { return; }
+  if (!el) return;
+  for (let d = el.closest('details'); d; d = d.parentElement?.closest('details') ?? null) d.open = true;
+  if (scroll) el.scrollIntoView({ block: 'start' });
+}
+
+function setupSectionLinks() {
+  // Vor der Standard-Navigation öffnen, damit der Browser zum sichtbaren Abschnitt springt
+  document.addEventListener('click', (e) => {
+    const a = e.target instanceof Element ? e.target.closest('a[href^="#"]') : null;
+    if (a) revealTarget(a.getAttribute('href'));
+  });
+  window.addEventListener('hashchange', () => revealTarget(window.location.hash, { scroll: true }));
+  if (window.location.hash) {
+    revealTarget(window.location.hash, { scroll: true });
+    // Nach dem ersten Rendern verschiebt sich die Seitenhöhe – dann erneut zum Abschnitt springen
+    document.addEventListener('laderick:rendered', () => revealTarget(window.location.hash, { scroll: true }), { once: true });
+  }
+  window.addEventListener('beforeprint', () => {
+    for (const d of document.querySelectorAll('details.info-details')) d.open = true;
+  });
+}
+
 // ---------- Start ----------
 
 function init() {
+  setupSectionLinks();
   ui.renderOverrideBanner({ nowOverride, sourceOverride });
   const link = document.getElementById('override-link');
   if (link) link.href = window.location.pathname;

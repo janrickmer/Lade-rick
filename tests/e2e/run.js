@@ -69,7 +69,9 @@ await scenario('Standardfall: SMARD liefert, Hero/Ausblick/Kennzahlen/Chart/Tabe
   assert.match(await text(page, '#hero [data-field="compare"]'), /günstiger als der Durchschnitt der letzten 72 h/);
   assert.match(await text(page, '#hero [data-field="range"]'), /Analysiert: .* \(72 h\)\./);
   // Diagramm steht ganz oben, vor der Hero-Karte
-  assert.ok((await page.locator('#chart-card').boundingBox()).y < (await page.locator('#hero').boundingBox()).y, 'Chart über der Hero-Karte');
+  // Reihenfolge: Preisverlauf → Kommend → Empfehlung (orange) → Vergangen → Kennzahlen
+  const ys = await Promise.all(['#chart-card', '#outlook', '#start-time', '#hero', '#kpi-min'].map(async (sel) => (await page.locator(sel).boundingBox()).y));
+  for (let i = 1; i < ys.length; i += 1) assert.ok(ys[i - 1] < ys[i], `Reihenfolge verletzt an Position ${i}: ${ys.join(' / ')}`);
   assert.equal(await page.locator('#range-3').isChecked(), true);
   assert.equal(await text(page, '#chart-subtitle'), 'Gestern bis morgen · So., 27.09., 00:00 – Di., 29.09., 24:00 Uhr · 15-Minuten-Werte');
   assert.equal(await text(page, '#range-hint'), 'Gestern bis morgen: So., 27.09., 00:00 – Di., 29.09., 24:00 Uhr.');
@@ -430,7 +432,7 @@ await scenario('Kleines Display (320 px): Kennzahlen bleiben einzeilig, kein Üb
   assert.ok(inside, 'Kennzahl bleibt in der Kachel');
 }, { viewport: { width: 320, height: 700 } });
 
-await scenario('Tablet (768 px): zweispaltige Hero-Karten ohne Überlauf', async (page) => {
+await scenario('Tablet (768 px): Ergebniskarten ohne Überlauf', async (page) => {
   await mockSources(page, {});
   await page.goto(url());
   await waitForRender(page);
@@ -561,7 +563,8 @@ await scenario('Orange Empfehlungskarte: beste Startzeit über 72 h, zweite Kart
   const chartBox = await page.locator('#chart-card').boundingBox();
   const cardBox = await page.locator('#start-time').boundingBox();
   const heroBox = await page.locator('#hero').boundingBox();
-  assert.ok(chartBox.y < cardBox.y && cardBox.y < heroBox.y, 'Reihenfolge Diagramm → Empfehlung → Hero');
+  const outlookBox = await page.locator('#outlook').boundingBox();
+  assert.ok(chartBox.y < outlookBox.y && outlookBox.y < cardBox.y && cardBox.y < heroBox.y, 'Reihenfolge Diagramm → Kommend → Empfehlung → Vergangen');
   assert.equal(await page.locator('#start-time').evaluate((el) => getComputedStyle(el).backgroundColor), 'rgb(240, 138, 46)');
   assert.equal(await page.locator('#start-time').getAttribute('data-state'), 'ready');
 });
@@ -578,6 +581,45 @@ await scenario('Empfehlungskarte ohne ausreichende Daten zeigt einen Hinweis', a
   assert.equal(r.startTime, null);
   assert.equal(await page.locator('#start-time [data-field="empty"]').isVisible(), true);
   assert.equal(await text(page, '#start-time [data-field="time"]'), '–');
+});
+
+await scenario('Aufklappbare Abschnitte: Datenquellen und Rechtliches eingeklappt, Links öffnen sie', async (page) => {
+  await mockSources(page, {});
+  await page.goto(url());
+  await waitForRender(page);
+  // „Negative Preise“ ist der letzte offen sichtbare Abschnitt im Info-Teil
+  const openHeadings = await page.locator('#info > h3').allTextContents();
+  assert.equal(openHeadings.at(-1), 'Negative Preise');
+  for (const id of ['quellen', 'impressum', 'datenschutz', 'haftung']) {
+    assert.equal(await page.locator(`#${id}`).evaluate((d) => d.tagName === 'DETAILS' && !d.open), true, `${id} eingeklappt`);
+    assert.equal(await page.locator(`#${id} > summary`).isVisible(), true, `${id}: Überschrift sichtbar`);
+  }
+  assert.equal(await page.locator('#impressum address').isVisible(), false);
+  // Footer-Link öffnet das Impressum
+  await page.locator('.site-footer a[href="#impressum"]').click();
+  await page.waitForFunction(() => document.getElementById('impressum').open);
+  assert.equal(await page.locator('#impressum address').isVisible(), true);
+  assert.match(await text(page, '#impressum address'), /Jan-Rickmer Feindt.*An der Bauna 30.*34270 Schauenburg.*feindt\+ladeRick@janrickmer\.de/);
+  const inView = await page.locator('#impressum').evaluate((el) => { const r = el.getBoundingClientRect(); return r.top >= -2 && r.top < window.innerHeight; });
+  assert.ok(inView, 'Impressum im sichtbaren Bereich');
+  // Hinweis unter den Kennzahlen öffnet die Datenquellen
+  await page.locator('.disclaimer-note a[href="#quellen"]').click();
+  await page.waitForFunction(() => document.getElementById('quellen').open);
+  // Klick auf die Überschrift klappt wieder zu
+  await page.locator('#quellen > summary').click();
+  assert.equal(await page.locator('#quellen').evaluate((d) => d.open), false);
+});
+
+await scenario('Direktaufruf mit #datenschutz öffnet den Abschnitt beim Laden', async (page) => {
+  await mockSources(page, {});
+  await page.goto(`${url()}#datenschutz`);
+  await waitForRender(page);
+  await page.waitForFunction(() => document.getElementById('datenschutz').open);
+  assert.equal(await page.locator('#datenschutz').evaluate((d) => d.open), true);
+  assert.equal(await page.locator('#impressum').evaluate((d) => d.open), false);
+  await page.waitForTimeout(100);
+  const top = await page.locator('#datenschutz').evaluate((el) => el.getBoundingClientRect().top);
+  assert.ok(top >= -2 && top < 200, `Abschnitt oben im Bild (top=${top})`);
 });
 
 // ---------------------------------------------------------------------------
