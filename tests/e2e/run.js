@@ -96,11 +96,16 @@ await scenario('Standardfall: SMARD liefert, Hero/Ausblick/Kennzahlen/Chart/Tabe
   // Chart
   assert.equal(await page.locator('#chart svg[role="img"]').count(), 1);
   assert.ok((await page.locator('#chart svg path.line').count()) >= 1);
+  // Grün markiert ist nur das günstigste kommende Fenster – rechts der „Jetzt“-Linie
   assert.equal(await page.locator('#chart svg .band-cheapest').count(), 1);
-  assert.equal(await page.locator('#chart svg .outlook-box').count(), 1);
+  assert.equal(await page.locator('#chart svg .outlook-box').count(), 0);
   assert.equal(await page.locator('#chart svg .now-line').count(), 1);
+  const bandX = Number(await page.locator('#chart svg .band-cheapest').getAttribute('x'));
+  const nowX = Number(await page.locator('#chart svg .now-line').getAttribute('x1'));
+  assert.ok(bandX >= nowX, `grünes Band (x=${bandX}) liegt vor der Jetzt-Linie (x=${nowX})`);
   assert.equal(await page.locator('#chart svg .region-future').count(), 1);
-  assert.match(await text(page, '#chart svg desc'), /Günstigstes 4-Stunden-Fenster/);
+  assert.match(await text(page, '#chart svg desc'), /Günstigstes kommendes 4-Stunden-Fenster/);
+  assert.equal(await text(page, '#chart-legend'), 'Vergangene Preise Kommende Preise (bereits bekannt) Günstigstes kommendes 4-h-Fenster');
   assert.match(await text(page, '#chart-subtitle'), /15-Minuten-Werte$/);
 
   // Tabelle: alle Punkte ab Analysebeginn
@@ -109,6 +114,9 @@ await scenario('Standardfall: SMARD liefert, Hero/Ausblick/Kennzahlen/Chart/Tabe
   assert.equal(await page.locator('#price-table tbody tr').count(), rowsExpected);
   assert.match(await text(page, '#table-summary'), new RegExp(`\\(${rowsExpected} Zeilen\\)`));
   assert.equal(await page.locator('#price-table tbody tr.row-cheapest').count(), 16);
+  const cheapRowStarts = await page.locator('#price-table tbody tr.row-cheapest time').evaluateAll((els) => els.map((e) => Date.parse(e.dateTime)));
+  assert.equal(cheapRowStarts[0], expectedUpcoming.start, 'Tabelle markiert das kommende Fenster');
+  assert.ok(cheapRowStarts.every((t) => t >= REFERENCE_NOW));
   assert.equal(await page.locator('#price-table tbody tr.row-now').count(), 1);
   await page.locator('#table-link').click();
   assert.equal(await page.locator('#table').evaluate((d) => d.open), true);
@@ -377,9 +385,12 @@ await scenario('Zeitumstellung 25.10.2026: Fenster über die doppelte Stunde wir
   assert.equal(await text(page, '#hero [data-field="time"]'), '01:00 MESZ – 04:00 MEZ');
   assert.equal(await page.locator('#hero [data-field="time"]').getAttribute('data-dst'), 'true');
   assert.equal(await text(page, '#hero [data-field="note"]'), 'Fenster über die Zeitumstellung: 4 h, Zeitumstellung.');
-  assert.equal(await page.locator('#price-table tbody tr.row-cheapest').count(), 16);
-  const rows = await page.locator('#price-table tbody tr.row-cheapest td:first-child').allTextContents();
-  assert.ok(rows.some((r) => /02:45\s*–\s*03:00\s*Uhr \(MESZ\)/.test(r)), rows.join(' | '));
+  // Tabelle: Zeitangaben in der doppelten Stunde eindeutig; grün markiert sind nur kommende Zeilen
+  const rows = await page.locator('#price-table tbody tr td:first-child').allTextContents();
+  assert.ok(rows.some((r) => /02:45\s*–\s*03:00\s*Uhr \(MESZ\)/.test(r)), 'Zeile 02:45–03:00 (MESZ) fehlt');
+  const cheapRowStarts = await page.locator('#price-table tbody tr.row-cheapest time').evaluateAll((els) => els.map((e) => Date.parse(e.dateTime)));
+  assert.equal(cheapRowStarts.length, 16);
+  assert.ok(cheapRowStarts.every((t) => t >= now), 'keine vergangene Zeile grün markiert');
   const [sw, iw] = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
   assert.equal(sw, iw, 'kein horizontaler Überlauf mit Zeitumstellungs-Fenster');
 }, { viewport: { width: 360, height: 780 } });
@@ -461,16 +472,38 @@ await scenario('Ungültiger ?source=-Parameter wird ignoriert (kein Banner, norm
   assert.doesNotMatch(await text(page, '#override-text'), /Quelle erzwungen/);
 });
 
-await scenario('Laufendes Ausblick-Fenster bis Mitternacht wird als „noch bis 24:00 Uhr“ beschrieben', async (page) => {
-  const now = Date.parse('2026-09-28T18:07:00Z'); // 20:07 MESZ – Fenster 20:00–24:00 läuft
+await scenario('Bereits begonnenes günstiges Fenster wird nicht gezeigt – frühester Start ist die nächste Viertelstunde', async (page) => {
+  const now = Date.parse('2026-09-28T18:07:00Z'); // 20:07 MESZ – der sehr günstige Block 20:00–24:00 läuft schon
   const cheapStart = Date.parse('2026-09-28T18:00:00Z'); // 20:00 MESZ
   const fixtures = buildFixtureSet({ now, price: (ts) => (ts >= cheapStart && ts < cheapStart + 4 * HOUR ? 1 : Math.max(syntheticPrice(ts), 5)) });
   await mockSources(page, { fixtures });
   await page.goto(url(nowParam(now)));
   const r = await waitForRender(page);
-  assert.equal(r.upcoming.start, cheapStart);
-  assert.equal(await text(page, '#outlook [data-field="time"]'), '20:00 – 24:00 Uhr');
-  assert.equal(await text(page, '#outlook [data-field="starts"]'), 'Läuft – noch bis 24:00 Uhr.');
+  assert.equal(r.upcoming.start, cheapStart + 15 * MINUTE, 'nicht 20:00, sondern 20:15');
+  assert.ok(r.upcoming.start >= now);
+  assert.equal(await text(page, '#outlook [data-field="time"]'), '20:15 – 00:15 Uhr');
+  assert.equal(await text(page, '#outlook [data-field="starts"]'), 'Beginnt in 8 Minuten.');
+  const bandX = Number(await page.locator('#chart svg .band-cheapest').getAttribute('x'));
+  const nowX = Number(await page.locator('#chart svg .now-line').getAttribute('x1'));
+  assert.ok(bandX >= nowX, `grünes Band (x=${bandX}) beginnt vor der Jetzt-Linie (x=${nowX})`);
+  const cheapRowStarts = await page.locator('#price-table tbody tr.row-cheapest time').evaluateAll((els) => els.map((e) => Date.parse(e.dateTime)));
+  assert.ok(cheapRowStarts.length > 0 && cheapRowStarts.every((t) => t >= now), 'keine begonnene Zeile grün markiert');
+});
+
+await scenario('An der Viertelstundengrenze wird ein gerade beginnendes Fenster sofort ersetzt', async (page) => {
+  const start = Date.parse('2026-09-28T18:14:50Z'); // 20:14:50 MESZ
+  const cheapStart = Date.parse('2026-09-28T18:15:00Z'); // 20:15 MESZ
+  const fixtures = buildFixtureSet({ now: start, price: (ts) => (ts >= cheapStart && ts < cheapStart + 4 * HOUR ? 1 : Math.max(syntheticPrice(ts), 5)) });
+  await page.clock.install({ time: start });
+  await mockSources(page, { fixtures });
+  await page.goto(`${srv.baseUrl}/`); // Live-Uhr (gesteuert), kein ?now=
+  await page.waitForFunction(() => Boolean(window.__LADERICK__?.upcoming), null, { polling: 100 });
+  assert.equal(await page.evaluate(() => window.__LADERICK__.upcoming.start), cheapStart);
+  await page.clock.fastForward(20_000); // über 20:15:00 hinaus
+  const after = await page.evaluate(() => ({ start: window.__LADERICK__.upcoming.start, now: window.__LADERICK__.now }));
+  assert.ok(after.now >= cheapStart, 'neu berechnet nach der Grenze');
+  assert.equal(after.start, cheapStart + 15 * MINUTE, 'nächstes noch nicht begonnenes Fenster');
+  assert.ok(after.start >= after.now);
 });
 
 await scenario('Unbrauchbarer Zwischenspeicher wird verworfen und die Seite lädt normal', async (page) => {
@@ -509,8 +542,7 @@ await scenario('Zeitraum-Umschalter in Kalendertagen: 1/2/3 Tage, Auswahl wird g
   assert.equal(await text(page, '#chart-subtitle'), 'Heute · Mo., 28.09., 00:00 – 24:00 Uhr · 15-Minuten-Werte');
   assert.equal(await page.locator('#price-table tbody tr').count(), 96);
   assert.equal(await page.locator('#chart svg .now-line').count(), 1);
-  assert.equal(await page.locator('#chart svg .band-cheapest').count(), 0, 'Fenster von gestern liegt außerhalb der Tagesansicht');
-  assert.equal(await page.locator('#chart svg .outlook-box').count(), 0, 'Ausblick liegt morgen, außerhalb der Tagesansicht');
+  assert.equal(await page.locator('#chart svg .band-cheapest').count(), 0, 'kommendes Fenster liegt morgen, außerhalb der Tagesansicht');
   assert.equal(await page.evaluate(() => localStorage.getItem('laderick:days')), '1');
 
   await page.locator('label[for="range-2"]').click();
@@ -520,7 +552,7 @@ await scenario('Zeitraum-Umschalter in Kalendertagen: 1/2/3 Tage, Auswahl wird g
   assert.equal(r2.viewStart, Date.parse('2026-09-27T22:00:00Z'));
   assert.equal(r2.viewEnd, Date.parse('2026-09-29T22:00:00Z'));
   assert.equal(await page.locator('#price-table tbody tr').count(), 2 * 96);
-  assert.equal(await page.locator('#chart svg .outlook-box').count(), 1);
+  assert.equal(await page.locator('#chart svg .band-cheapest').count(), 1);
 
   await page.reload();
   const again = await waitForRender(page);

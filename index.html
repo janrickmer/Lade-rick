@@ -73,8 +73,7 @@
       <ul class="legend" id="chart-legend" aria-label="Legende">
         <li><span class="swatch swatch-line" aria-hidden="true"></span>Vergangene Preise</li>
         <li><span class="swatch swatch-future" aria-hidden="true"></span>Kommende Preise (bereits bekannt)</li>
-        <li><span class="swatch swatch-cheapest" aria-hidden="true"></span>Günstigstes 4-h-Fenster</li>
-        <li><span class="swatch swatch-outlook" aria-hidden="true"></span>Ausblick (kommend)</li>
+        <li><span class="swatch swatch-cheapest" aria-hidden="true"></span>Günstigstes kommendes 4-h-Fenster</li>
       </ul>
       <details id="table" class="table-details">
         <summary id="table-summary">Alle Werte als Tabelle</summary>
@@ -109,7 +108,7 @@
       <p class="hero-meta muted" data-field="note"></p>
       <p class="hero-meta muted" data-field="starts"></p>
       <p class="hero-empty" data-field="empty" hidden></p>
-      <p class="footnote muted">Feste, bereits veröffentlichte Börsenpreise – keine Prognose. Kann das laufende Zeitfenster einschließen.</p>
+      <p class="footnote muted">Feste, bereits veröffentlichte Börsenpreise – keine Prognose. Es werden nur Fenster angezeigt, die noch nicht begonnen haben; im Diagramm grün markiert.</p>
       <details class="info-details card-details" id="startzeit">
         <summary><h3>Beste Ladezeit der letzten Tage</h3></summary>
         <p data-field="st-text" hidden></p>
@@ -186,8 +185,9 @@
         zeitgewichtete Mittelwert gebildet; das Fenster mit dem niedrigsten Mittel wird angezeigt. Bei gleichem Mittel gewinnt
         das frühere Fenster. Fehlen einzelne Werte, werden nur lückenlose Fenster berücksichtigt; gibt es keines, wird das beste
         Fenster mit mindestens 75&nbsp;% Datenabdeckung als Näherung gekennzeichnet. Der angegebene Durchschnittspreis ist auf eine
-        Nachkommastelle gerundet und deshalb ein „ungefährer“ Wert. Der Ausblick nutzt dieselbe Rechnung für die bereits
-        veröffentlichten Preise ab dem laufenden Zeitabschnitt.</p>
+        Nachkommastelle gerundet und deshalb ein „ungefährer“ Wert. Die orangefarbene Karte „Kommend“ nutzt dieselbe
+        Rechnung für die bereits veröffentlichten Preise, berücksichtigt aber nur Fenster, die noch nicht begonnen haben
+        (frühester Start ist die nächste volle Viertelstunde). Nur dieses kommende Fenster ist im Diagramm grün markiert.</p>
       <p>Der aufklappbare Rückblick „Beste Ladezeit der letzten Tage“ in der orangefarbenen Karte fragt etwas anderes:
         Welche Uhrzeit war als Ladebeginn im Durchschnitt der letzten 72 Stunden am günstigsten? Dafür werden für jede
         Uhrzeit im 15-Minuten-Raster die 4-Stunden-Fenster mit diesem Startzeitpunkt an allen Tagen des Zeitraums gemittelt

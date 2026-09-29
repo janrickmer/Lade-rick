@@ -210,14 +210,16 @@ export function resolutionAt(points, now) {
 }
 
 /**
- * Günstigstes Fenster in den bereits veröffentlichten (künftigen) Preisen ab dem laufenden Slot.
- * null, wenn weniger als `slotHours` lückenlose Daten ab jetzt vorliegen.
+ * Günstigstes Fenster in den bereits veröffentlichten (künftigen) Preisen, das noch nicht begonnen hat:
+ * Kandidaten starten frühestens an der nächsten Rastergrenze ab „jetzt“ (bei 15-min-Daten also zur nächsten
+ * vollen Viertelstunde; liegt „jetzt“ genau auf einer Grenze, ab dieser). Ein bereits laufendes Fenster wird
+ * nie zurückgegeben. null, wenn ab dann weniger als `slotHours` lückenlose Daten vorliegen.
  */
 export function cheapestUpcomingSlot(points, { now, slotHours = 4, resolutionMinutes } = {}) {
   if (!Number.isFinite(now)) throw new TypeError('cheapestUpcomingSlot: now fehlt');
   if (!points.length) return null;
   const res = resolutionMinutes ?? resolutionAt(points, now);
-  const rangeStart = floorToResolution(now, res);
+  const rangeStart = ceilToResolution(now, res);
   const rangeEnd = points[points.length - 1].end;
   const slotMs = slotHours * HOUR;
   if (rangeEnd - rangeStart < slotMs) return null;

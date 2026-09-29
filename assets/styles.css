@@ -166,7 +166,7 @@ main { padding-bottom: 32px; }
   padding: 3px 10px; border-radius: 999px; margin-bottom: 10px;
   background: var(--surface-2); color: var(--ink-2);
 }
-.pill-past { background: var(--series-2-wash); color: var(--ink); }
+.pill-past { background: var(--surface-2); color: var(--ink); }
 .pill-future { background: var(--future-wash); color: var(--ink); }
 
 .hero-overline { margin-top: 10px; color: var(--ink-2); }
@@ -288,7 +288,6 @@ main { padding-bottom: 32px; }
 .chart .line-cheapest { fill: none; stroke: var(--series-2); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
 .chart .band-cheapest { fill: var(--series-2-wash); }
 .chart .region-future { fill: var(--future-wash); }
-.chart .outlook-box { fill: none; stroke: var(--series-2); stroke-width: 1.5; stroke-dasharray: 5 4; }
 .chart .now-line { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 3 3; }
 .chart .region-label { fill: var(--ink-2); font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
 .chart .band-label { fill: var(--ink); font-size: 11px; font-weight: 600; }
@@ -319,7 +318,6 @@ main { padding-bottom: 32px; }
 .swatch-line { height: 0; border-top: 2px solid var(--series-1); border-radius: 0; }
 .swatch-future { background: var(--future-wash); border-top: 2px solid var(--series-1); border-radius: 0; }
 .swatch-cheapest { background: var(--series-2-wash); border-top: 3px solid var(--series-2); border-radius: 0; }
-.swatch-outlook { border: 1.5px dashed var(--series-2); background: transparent; }
 
 /* ---------- Tabelle ---------- */
 

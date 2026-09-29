@@ -1,11 +1,12 @@
-// SVG-Preisverlauf ohne Abhängigkeiten: Stufenlinie mit Flächenfüllung, Band für das günstigste
-// Fenster, gestrichelter Rahmen für den Ausblick, „Jetzt“-Linie, Bereich der kommenden Preise,
+// SVG-Preisverlauf ohne Abhängigkeiten: Stufenlinie mit Flächenfüllung, grünes Band für das günstigste
+// kommende 4-h-Fenster (nie ein vergangenes), „Jetzt“-Linie, Bereich der kommenden Preise,
 // Crosshair mit Tooltip (Desktop) bzw. Ablesezeile (Mobil) und Tastaturnavigation.
 
 import { HOUR, MINUTE, currentPoint, floorToResolution } from './analysis.js';
 import { formatCt, formatMwh, formatTime, formatDateShort, formatRange, berlinParts } from './format.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
+const CHEAPEST_TAG = 'günstigstes kommendes Fenster';
 const MARGIN = { top: 26, right: 14, bottom: 42, left: 46 };
 const TICK_STEPS_H = [3, 6, 12, 24];
 const MIN_LABEL_PX = 48;
@@ -125,7 +126,7 @@ export class PriceChart {
   }
 
   /**
-   * @param {{ points:Array<{start:number,end:number,price:number}>, now:number, slot?:object|null, upcoming?:object|null,
+   * @param {{ points:Array<{start:number,end:number,price:number}>, now:number, cheapest?:object|null,
    *           range?:{start:number,end:number}, viewStart?:number, viewEnd?:number, resolutionMinutes:number }} state
    */
   update(state) {
@@ -160,7 +161,8 @@ export class PriceChart {
     if (old) old.remove();
     if (!this.state || !width || !height) return;
 
-    const { points, now, slot, upcoming, range, resolutionMinutes } = this.state;
+    const { points, now, range, resolutionMinutes } = this.state;
+    const cheapest = this.state.cheapest ?? null; // günstigstes kommendes Fenster (beginnt nie vor „jetzt“)
     const res = resolutionMinutes || 15;
     const nowFloor = floorToResolution(now, res);
     const lastEnd = points.length ? points[points.length - 1].end : now;
@@ -214,10 +216,10 @@ export class PriceChart {
       if (x(Math.min(lastEnd, xMax)) - x(futureStart) > 70) text(gRegions, x(futureStart) + 6, MARGIN.top + 14, 'kommend', 'region-label');
     }
 
-    // Band für das günstigste Fenster
-    if (slot && slot.end > xMin && slot.start < xMax) {
-      const bx = x(Math.max(slot.start, xMin));
-      const bw = x(Math.min(slot.end, xMax)) - bx;
+    // Grünes Band für das günstigste kommende Fenster
+    if (cheapest && cheapest.end > xMin && cheapest.start < xMax) {
+      const bx = x(Math.max(cheapest.start, xMin));
+      const bw = x(Math.min(cheapest.end, xMax)) - bx;
       svgEl('rect', { class: 'band-cheapest', x: bx, y: MARGIN.top, width: bw, height: plotH }, gRegions);
       const label = bw >= 130 ? 'günstigstes 4-h-Fenster' : bw >= 44 ? 'günstig' : null;
       if (label) text(gRegions, bx + 6, MARGIN.top + plotH - 8, label, 'band-label');
@@ -249,8 +251,8 @@ export class PriceChart {
       svgEl('path', { class: 'area', d: `${d} V ${y0.toFixed(1)} H ${x(Math.max(s[0].start, xMin)).toFixed(1)} Z` }, gData);
       svgEl('path', { class: 'line', d }, gData);
     }
-    if (slot) {
-      const inSlot = visible.filter((p) => p.end > slot.start && p.start < slot.end);
+    if (cheapest) {
+      const inSlot = visible.filter((p) => p.end > cheapest.start && p.start < cheapest.end);
       const segs = [];
       let cur = [];
       for (const p of inSlot) {
@@ -258,15 +260,7 @@ export class PriceChart {
         cur.push(p);
       }
       if (cur.length) segs.push(cur);
-      for (const s of segs) svgEl('path', { class: 'line-cheapest', d: this.stepPath(s, x, y, Math.max(xMin, slot.start), Math.min(xMax, slot.end)) }, gData);
-    }
-
-    // Ausblick-Rahmen
-    if (upcoming && upcoming.end > xMin && upcoming.start < xMax) {
-      const ux = x(Math.max(upcoming.start, xMin));
-      const uw = x(Math.min(upcoming.end, xMax)) - ux;
-      svgEl('rect', { class: 'outlook-box', x: ux + 0.75, y: MARGIN.top + 0.75, width: Math.max(0, uw - 1.5), height: plotH - 1.5, rx: 3 }, gAnno);
-      if (uw >= 52) text(gAnno, ux + 6, MARGIN.top + plotH - 8, 'Ausblick', 'band-label');
+      for (const s of segs) svgEl('path', { class: 'line-cheapest', d: this.stepPath(s, x, y, Math.max(xMin, cheapest.start), Math.min(xMax, cheapest.end)) }, gData);
     }
 
     // Jetzt-Linie
@@ -341,7 +335,7 @@ export class PriceChart {
   }
 
   describe(visible, xMin, xMax) {
-    const { slot, resolutionMinutes } = this.state;
+    const { cheapest, resolutionMinutes } = this.state;
     let min = visible[0];
     let max = visible[0];
     for (const p of visible) { if (p.price < min.price) min = p; if (p.price > max.price) max = p; }
@@ -349,7 +343,7 @@ export class PriceChart {
       `Preisverlauf ${formatRange(xMin, xMax)} in ${resolutionMinutes === 60 ? 'Stundenwerten' : `${resolutionMinutes}-Minuten-Werten`}.`,
       `Minimum ${formatCt(min.price)} am ${formatDateShort(min.start)} um ${formatTime(min.start)} Uhr, Maximum ${formatCt(max.price)} am ${formatDateShort(max.start)} um ${formatTime(max.start)} Uhr.`,
     ];
-    if (slot) parts.push(`Günstigstes 4-Stunden-Fenster ${formatRange(slot.start, slot.end)} mit durchschnittlich ${formatCt(slot.meanPrice)}.`);
+    if (cheapest) parts.push(`Günstigstes kommendes 4-Stunden-Fenster ${formatRange(cheapest.start, cheapest.end)} mit durchschnittlich ${formatCt(cheapest.meanPrice)}.`);
     parts.push('Alle Werte stehen in der Tabelle unter dem Diagramm.');
     return parts.join(' ');
   }
@@ -358,12 +352,11 @@ export class PriceChart {
 
   /** Beschreibung eines Punkts für Tooltip, Ablesezeile und Screenreader. */
   describePoint(p) {
-    const { now, slot, upcoming } = this.state;
+    const { now, cheapest } = this.state;
     const tags = [];
-    if (slot && p.start >= slot.start && p.start < slot.end) tags.push('günstigstes Fenster');
+    if (cheapest && p.start >= cheapest.start && p.start < cheapest.end) tags.push(CHEAPEST_TAG);
     if (p.start <= now && now < p.end) tags.push('jetzt');
-    else if (p.start > now) tags.push('kommend');
-    if (upcoming && p.start >= upcoming.start && p.start < upcoming.end) tags.push('Ausblick');
+    else if (p.start > now && !tags.includes(CHEAPEST_TAG)) tags.push('kommend');
     return {
       title: formatRange(p.start, p.end),
       ct: formatCt(p.price),
@@ -387,7 +380,7 @@ export class PriceChart {
     marker.setAttribute('cx', cx.toFixed(1));
     marker.setAttribute('cy', cy.toFixed(1));
     const info = this.describePoint(p);
-    marker.classList.toggle('marker-cheapest', info.tags.includes('günstigstes Fenster'));
+    marker.classList.toggle('marker-cheapest', info.tags.includes(CHEAPEST_TAG));
     this.hoverLayer.setAttribute('visibility', 'visible');
 
     // Tooltip (Desktop)

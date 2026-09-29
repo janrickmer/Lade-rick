@@ -107,13 +107,12 @@ function render({ fromCache = false } = {}) {
   ui.renderOutlook(upcoming, { now, knownUntil });
   ui.renderKpis({ current, result, now });
   ui.renderChartMeta({ points: series.points, view, resolutionMinutes: series.resolutionMinutes, now });
-  ui.renderTable({ points: series.points, view, slot: result.slot, upcoming, now });
+  ui.renderTable({ points: series.points, view, cheapest: upcoming, now });
   ui.renderStatusMeta({ series, attempts, now, knownUntil });
   state.chart.update({
     points: series.points,
     now,
-    slot: result.slot,
-    upcoming,
+    cheapest: upcoming, // grün im Diagramm: nur das günstigste kommende Fenster
     range: result.range,
     viewStart: view.viewStart,
     viewEnd: view.viewEnd,
@@ -124,6 +123,19 @@ function render({ fromCache = false } = {}) {
 
   window.__LADERICK__ = { series, result, upcoming, startTime, current, attempts, now, fromCache, viewDays: state.viewDays, viewStart: view.viewStart, viewEnd: view.viewEnd, viewLabel: view.label };
   document.dispatchEvent(new CustomEvent('laderick:rendered', { detail: window.__LADERICK__ }));
+  scheduleBoundaryRender();
+}
+
+/**
+ * Neu berechnen genau an der nächsten Viertelstundengrenze: Sobald ein angezeigtes kommendes Fenster beginnt,
+ * wird sofort das nächste noch nicht begonnene Fenster gesucht (zusätzlich zur minütlichen Aktualisierung).
+ */
+function scheduleBoundaryRender() {
+  window.clearTimeout(state.boundaryTimer);
+  if (Number.isFinite(nowOverride)) return;
+  const step = 15 * MINUTE;
+  const wait = Math.floor(Date.now() / step) * step + step - Date.now() + 250;
+  state.boundaryTimer = window.setTimeout(() => { if (state.series) render({ fromCache: true }); }, wait);
 }
 
 // ---------- Laden ----------
@@ -295,12 +307,15 @@ function init() {
   window.setInterval(() => load(), config.refreshMinutes * MINUTE);
   // … lokale Neuberechnung (Jetzt-Linie, aktueller Preis, Ausblick) jede Minute ohne Netzabruf …
   window.setInterval(() => { if (state.series && !Number.isFinite(nowOverride)) render({ fromCache: true }); }, MINUTE);
-  // … und beim Zurückkehren in den Tab, wenn der letzte Abruf schon länger her ist.
+  // … und beim Zurückkehren in den Tab: sofort neu rechnen (damit kein inzwischen begonnenes Fenster stehen bleibt),
+  // danach neu abrufen, wenn der letzte Abruf schon länger her ist.
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
+    if (state.series) render({ fromCache: true });
     if (Date.now() - state.lastFetchAt > config.refetchAfterHiddenMinutes * MINUTE) load();
-    else if (state.series) render({ fromCache: true });
   });
+  // Rückkehr per Zurück-Taste aus dem Browser-Cache (bfcache): ebenfalls sofort neu rechnen
+  window.addEventListener('pageshow', (e) => { if (e.persisted && state.series) render({ fromCache: true }); });
 }
 
 init();

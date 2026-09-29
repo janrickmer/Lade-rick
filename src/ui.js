@@ -149,8 +149,8 @@ export function renderOutlook(upcoming, { now, knownUntil }) {
   setField(root, 'ct', formatCt(upcoming.meanPrice));
   setField(root, 'mwh', `(≈ ${formatMwh(upcoming.meanPrice)})`);
   setChips(root, 'flags', upcoming.meanPrice < 0 ? [{ text: 'negativer Preis', title: NEGATIVE_HINT }] : []);
-  if (upcoming.start > now) setField(root, 'starts', `Beginnt ${formatIn(upcoming.start, now)}.`);
-  else setField(root, 'starts', `Läuft – noch bis ${formatEndTime(upcoming.end)} Uhr.`);
+  // Das kommende Fenster beginnt nie vor „jetzt“ (siehe cheapestUpcomingSlot)
+  setField(root, 'starts', `Beginnt ${formatIn(upcoming.start, now)}.`);
 }
 
 // ---------- Rückblick „Beste Ladezeit der letzten Tage“ (aufklappbar in der orangen Karte) ----------
@@ -233,7 +233,7 @@ export function renderChartMeta({ points, view, resolutionMinutes, now }) {
   }
 }
 
-export function renderTable({ points, view, slot, upcoming, now }) {
+export function renderTable({ points, view, cheapest, now }) {
   const tbody = $('#price-table tbody');
   const xMin = view?.viewStart ?? (points[0]?.start ?? now);
   const xMax = view?.viewEnd ?? Infinity;
@@ -243,10 +243,10 @@ export function renderTable({ points, view, slot, upcoming, now }) {
   for (const p of rows) {
     const tr = document.createElement('tr');
     const marks = [];
-    if (slot && p.start >= slot.start && p.start < slot.end) { marks.push('günstigstes Fenster'); tr.classList.add('row-cheapest'); }
+    const inCheapest = Boolean(cheapest) && p.start >= cheapest.start && p.start < cheapest.end;
+    if (inCheapest) { marks.push('günstigstes kommendes Fenster'); tr.classList.add('row-cheapest'); }
     if (p.start <= now && now < p.end) { marks.push('jetzt'); tr.classList.add('row-now'); }
-    else if (p.start > now) marks.push('kommend');
-    if (upcoming && p.start >= upcoming.start && p.start < upcoming.end) marks.push('Ausblick');
+    else if (p.start > now && !inCheapest) marks.push('kommend');
     const tdTime = document.createElement('td');
     const time = document.createElement('time');
     time.dateTime = new Date(p.start).toISOString();

@@ -9,13 +9,14 @@ gibt dessen ungefähren Durchschnittspreis an. Keine Anmeldung, keine Cookies, k
 - **Günstigstes 4-Stunden-Fenster der letzten 72 Stunden** mit Uhrzeiten, Ø-Preis in ct/kWh (und €/MWh) und
   Vergleich zum 72-h-Durchschnitt.
 - **Ausblick** (orange Karte direkt unter dem Diagramm): günstigstes 4-h-Fenster in den bereits veröffentlichten
-  Preisen ab jetzt (Day-Ahead-Preise für den Folgetag erscheinen täglich gegen 13 Uhr) – klar als „kommend“
+  Preisen, das noch nicht begonnen hat (frühester Start: nächste volle Viertelstunde; nur dieses Fenster ist im
+  Diagramm grün markiert) (Day-Ahead-Preise für den Folgetag erscheinen täglich gegen 13 Uhr) – klar als „kommend“
   gekennzeichnet, keine Prognose. Darin aufklappbar der Rückblick „Beste Ladezeit der letzten Tage“: die Uhrzeit, zu der
   ein 4-Stunden-Ladevorgang im Durchschnitt der letzten 72 Stunden am günstigsten begonnen hätte (Mittel über alle Tage
   je Uhrzeit, mindestens zwei vollständige Fenster).
 - **Preisverlauf** ganz oben als SVG-Chart mit wählbarem Zeitraum in Kalendertagen (1 Tag = heute, 2 Tage = heute und
   morgen, 3 Tage = gestern bis morgen; solange die Preise für morgen noch nicht veröffentlicht sind, rückt der Zeitraum
-  einen Tag zurück), Nulllinie für negative Preise, „Jetzt“-Linie, markiertem Fenster, Tooltip/Ablesezeile,
+  einen Tag zurück), Nulllinie für negative Preise, „Jetzt“-Linie, grün markiertem kommendem Fenster, Tooltip/Ablesezeile,
   Tastaturnavigation, plus Tabellenansicht.
 - **Kennzahlen**: aktueller Börsenpreis, Minimum und Maximum der letzten 72 Stunden.
 - **Reihenfolge der Seite**: Preisverlauf → günstigstes kommendes 4-h-Fenster (orange) → günstigstes 4-h-Fenster der
@@ -51,7 +52,9 @@ Zwischenspeicher fangen CORS-Blockaden ab (siehe Abschnitt *Betrieb*).
    Fenstergrenzen zählen anteilig.
 3. Nur lückenlose Fenster zählen; gibt es keines, wird das beste Fenster mit ≥ 75 % Abdeckung als Näherung
    gekennzeichnet. Gleichstand → früheres Fenster.
-4. Der Ausblick verwendet dieselbe Rechnung ab dem laufenden Zeitabschnitt, ohne Näherungs-Fallback.
+4. Der Ausblick verwendet dieselbe Rechnung für Fenster, die noch nicht begonnen haben (Start frühestens zur nächsten
+   vollen Viertelstunde), ohne Näherungs-Fallback. Nur dieses kommende Fenster wird im Diagramm grün markiert; die
+   Seite rechnet an jeder Viertelstundengrenze neu, sodass ein gerade beginnendes Fenster sofort ersetzt wird.
 
 Die Logik liegt in `src/analysis.js` und ist vollständig durch Unit-Tests abgedeckt (u. a. Zeitumstellung,
 Datenlücken, gemischte Auflösung 15/60 min, negative Preise, Duplikate aus SMARD-Wochendateien).

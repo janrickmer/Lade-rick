@@ -323,15 +323,36 @@ test('zeitgewichteter Mittelwert bei gemischter Auflösung', () => {
   approx(st.coveredMs, 4 * HOUR);
 });
 
-test('cheapestUpcomingSlot nutzt den laufenden Slot und die bekannten künftigen Preise', () => {
+test('cheapestUpcomingSlot: nur Fenster, die noch nicht begonnen haben', () => {
   const now = m(14, 7);
   const pts = grid({ count: 48 * 4, price: (i, s) => (s >= m(20) && s < m(24) ? 8 : 90) });
   const u = cheapestUpcomingSlot(pts, { now });
-  assert.deepEqual([u.range.start, u.range.end], [m(14), m(48)]);
+  assert.deepEqual([u.range.start, u.range.end], [m(14, 15), m(48)]);
   assert.equal(u.start, m(20));
   approx(u.meanPrice, 8);
+  // Der günstigste Block hat um 14:00 begonnen → wird nicht gezeigt; frühester Start ist 14:15
   const pts2 = grid({ count: 48 * 4, price: (i, s) => (s >= m(14) && s < m(18) ? 3 : 90) });
-  assert.equal(cheapestUpcomingSlot(pts2, { now }).start, m(14));
+  const u2 = cheapestUpcomingSlot(pts2, { now });
+  assert.equal(u2.start, m(14, 15));
+  approx(u2.meanPrice, (15 * 3 + 90) / 16);
+  // „jetzt“ genau auf der Grenze: ein Fenster ab jetzt ist zulässig
+  assert.equal(cheapestUpcomingSlot(pts2, { now: m(14) }).start, m(14));
+  // Stundenraster: frühester Start ist die nächste volle Stunde
+  const hourly = grid({ count: 48, resMin: 60, price: (i) => (i >= 14 && i < 18 ? 3 : 90) });
+  assert.equal(cheapestUpcomingSlot(hourly, { now: m(14, 7) }).start, m(15));
+});
+
+test('cheapestUpcomingSlot: Start liegt nie vor „jetzt“ (Stichprobe über 40 Stunden)', () => {
+  const pts = grid({ count: 72 * 4, price: (i) => 50 + 40 * Math.sin(i / 7) + (i % 5) });
+  let checked = 0;
+  for (let t = m(0, 1); t < m(40); t += 7 * MINUTE + 13_000) {
+    const u = cheapestUpcomingSlot(pts, { now: t });
+    if (!u) continue;
+    assert.ok(u.start >= t, `Start ${new Date(u.start).toISOString()} liegt vor jetzt ${new Date(t).toISOString()}`);
+    assert.equal(u.end - u.start, 4 * HOUR);
+    checked += 1;
+  }
+  assert.ok(checked > 300);
 });
 
 test('currentPoint findet den laufenden Slot', () => {
