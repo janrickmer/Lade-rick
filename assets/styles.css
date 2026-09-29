@@ -325,6 +325,8 @@ td.neg { color: var(--ink); }
 .card-error .button { margin-top: 12px; }
 
 .card-info p { margin-top: 8px; color: var(--ink-2); }
+.card-info p strong { color: var(--ink); }
+.disclaimer-note { margin-top: 6px; }
 .card-info h3 { color: var(--ink); }
 .source-list { margin: 8px 0 0; padding-left: 1.25rem; color: var(--ink-2); }
 .source-list li { margin-top: 6px; }
