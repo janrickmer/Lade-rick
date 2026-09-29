@@ -5,7 +5,8 @@ name: GitHub Pages
 
 on:
   push:
-    branches: [main]
+    # Standard-Branch dieses Repositories (bei Umbenennung auf main anpassen)
+    branches: [main, ccr-44d3aa6b-g7gd63]
   schedule:
     - cron: '17 * * * *'
   workflow_dispatch:

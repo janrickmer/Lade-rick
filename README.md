@@ -90,7 +90,7 @@ Die Seite braucht keinen Build-Schritt; ES-Module benötigen aber einen HTTP-Ser
 ## Betrieb
 
 **GitHub Pages:** In den Repository-Einstellungen unter *Pages* als Quelle „GitHub Actions“ wählen. Der
-Workflow `.github/workflows/pages.yml` veröffentlicht die Seite bei jedem Push auf `main` und zusätzlich
+Workflow `.github/workflows/pages.yml` veröffentlicht die Seite bei jedem Push auf den Standard-Branch und zusätzlich
 stündlich; dabei erzeugt er serverseitig `data/prices.json` als Fallback, falls der Browser die Quellen nicht
 direkt erreichen kann (z. B. fehlende CORS-Freigabe oder Ausfall). Ohne diesen Snapshot funktioniert die Seite
 ebenfalls, solange mindestens eine Quelle direkt erreichbar ist.
