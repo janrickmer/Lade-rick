@@ -153,40 +153,36 @@ export function renderOutlook(upcoming, { now, knownUntil }) {
   else setField(root, 'starts', `Läuft – noch bis ${formatEndTime(upcoming.end)} Uhr.`);
 }
 
-// ---------- Empfehlung: beste Startzeit ----------
+// ---------- Rückblick „Beste Ladezeit der letzten Tage“ (aufklappbar in der orangen Karte) ----------
 
 /**
+ * Kurzfassung der besten Start-Uhrzeit für eine Ladung, gemittelt über die vergangenen Tage.
  * @param {ReturnType<import('./analysis.js').cheapestStartTimeOfDay>} result
- * @param {{ now:number }} ctx
  */
-export function renderStartTime(result, { now }) {
-  const root = $('#start-time');
-  root.dataset.state = 'ready';
-  const empty = $('[data-field="empty"]', root);
-  setField(root, 'hours', String(result?.lookbackHours ?? 72));
+export function renderStartTime(result) {
+  const root = $('#startzeit');
+  if (!root) return;
+  const text = $('[data-field="st-text"]', root);
+  const empty = $('[data-field="st-empty"]', root);
   const best = result?.best ?? null;
   if (!best) {
-    setField(root, 'time', '–');
-    setField(root, 'ct', '–');
-    setField(root, 'mwh', '');
-    setField(root, 'window', '');
-    setField(root, 'days', '');
-    setField(root, 'runner', '');
+    text.replaceChildren();
+    text.hidden = true;
     empty.hidden = false;
-    empty.textContent = 'Für keine Uhrzeit liegen genügend vollständige Preisdaten der vergangenen Tage vor.';
+    empty.textContent = 'Für die letzten Tage liegen nicht genügend vollständige Preisdaten vor.';
     return;
   }
   empty.hidden = true;
-  const first = best.windows[0];
-  setField(root, 'time', `${best.key} Uhr`);
-  setField(root, 'ct', formatCt(best.meanPrice));
-  setField(root, 'mwh', `(≈ ${formatMwh(best.meanPrice)})`);
-  setField(root, 'window', `für das Fenster ${formatTimeRange(first.start, first.end)}`);
-  const perDay = best.windows.map((w) => `${formatDateShort(w.start)} ${formatCt(w.mean, { unit: false })}`).join(' · ');
-  setField(root, 'days', `Durchschnitt aus ${best.count} ${best.count === 1 ? 'Tag' : 'Tagen'} (ct/kWh): ${perDay}.`);
-  const runner = result.ranked[1];
-  setField(root, 'runner', runner ? `Zweitbeste Startzeit: ${runner.key} Uhr (Ø ca. ${formatCt(runner.meanPrice)}).` : '');
-  void now;
+  text.hidden = false;
+  const hours = result.lookbackHours ?? 72;
+  const slot = result.slotHours ?? 4;
+  const time = document.createElement('strong');
+  time.textContent = `${best.key} Uhr`;
+  text.replaceChildren(
+    `Im Durchschnitt der letzten ${hours} Stunden wäre ein Ladestart um `,
+    time,
+    ` am günstigsten gewesen (${slot} Stunden, Ø ca. ${formatCt(best.meanPrice)}, Mittel aus ${best.count} ${best.count === 1 ? 'Tag' : 'Tagen'}). Rückblick, keine Prognose.`,
+  );
 }
 
 // ---------- Kennzahlen ----------
@@ -335,7 +331,7 @@ export function showError(attempts) {
     text.textContent = `Keine der Quellen (${names.join(', ')}) war erreichbar. Bitte später erneut versuchen.`;
   }
   card.hidden = false;
-  for (const id of ['#hero', '#start-time', '#outlook', '#kpi-current', '#kpi-min', '#kpi-max', '#chart-card']) {
+  for (const id of ['#hero', '#outlook', '#kpi-current', '#kpi-min', '#kpi-max', '#chart-card']) {
     const el = $(id);
     if (!el || el.dataset.state !== 'loading') continue;
     el.dataset.state = 'error';

@@ -69,8 +69,8 @@ await scenario('Standardfall: SMARD liefert, Hero/Ausblick/Kennzahlen/Chart/Tabe
   assert.match(await text(page, '#hero [data-field="compare"]'), /günstiger als der Durchschnitt der letzten 72 h/);
   assert.match(await text(page, '#hero [data-field="range"]'), /Analysiert: .* \(72 h\)\./);
   // Diagramm steht ganz oben, vor der Hero-Karte
-  // Reihenfolge: Preisverlauf → Kommend → Empfehlung (orange) → Vergangen → Kennzahlen
-  const ys = await Promise.all(['#chart-card', '#outlook', '#start-time', '#hero', '#kpi-min'].map(async (sel) => (await page.locator(sel).boundingBox()).y));
+  // Reihenfolge: Preisverlauf → Kommend (orange) → Vergangen → Kennzahlen
+  const ys = await Promise.all(['#chart-card', '#outlook', '#hero', '#kpi-min'].map(async (sel) => (await page.locator(sel).boundingBox()).y));
   for (let i = 1; i < ys.length; i += 1) assert.ok(ys[i - 1] < ys[i], `Reihenfolge verletzt an Position ${i}: ${ys.join(' / ')}`);
   assert.equal(await page.locator('#range-3').isChecked(), true);
   assert.equal(await text(page, '#chart-subtitle'), 'Gestern bis morgen · So., 27.09., 00:00 – Di., 29.09., 24:00 Uhr · 15-Minuten-Werte');
@@ -333,6 +333,11 @@ await scenario('Dunkles Design: folgt der Systemeinstellung, Umschalter speicher
   assert.equal(await page.locator('#theme-toggle').getAttribute('aria-pressed'), 'true');
   assert.equal(await text(page, '#theme-toggle'), 'Dunkles Design');
   assert.equal(await page.evaluate(() => localStorage.getItem('laderick:theme')), null);
+  // Orange Karte bleibt im dunklen Design orange mit dunkler, gut lesbarer Schrift
+  assert.equal(await page.locator('#outlook').evaluate((el) => getComputedStyle(el).backgroundColor), 'rgb(240, 138, 46)');
+  for (const sel of ['#outlook .hero-time', '#outlook .card-title', '#outlook .pill', '#startzeit > summary h3']) {
+    assert.equal(await page.locator(sel).evaluate((el) => getComputedStyle(el).color), 'rgb(11, 11, 11)', sel);
+  }
   await page.screenshot({ path: resolve(SHOTS, 'desktop-dark.png'), fullPage: true });
   await page.locator('#theme-toggle').click();
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-theme')), 'light');
@@ -544,32 +549,36 @@ await scenario('Vor 13 Uhr (Morgenpreise unbekannt): 2 Tage = gestern und heute,
   assert.match(await text(page, '#status-msg'), /Die Preise für morgen erscheinen täglich gegen 13 Uhr\./);
 });
 
-await scenario('Orange Empfehlungskarte: beste Startzeit über 72 h, zweite Karte nach dem Diagramm', async (page) => {
+const expectedStartText = (best) =>
+  `Im Durchschnitt der letzten 72 Stunden wäre ein Ladestart um ${best.key} Uhr am günstigsten gewesen (4 Stunden, Ø ca. ${formatCt(best.meanPrice).replace(/\s+/g, ' ')}, Mittel aus ${best.count} ${best.count === 1 ? 'Tag' : 'Tagen'}). Rückblick, keine Prognose.`;
+
+await scenario('Orange Karte „Kommend“ mit aufklappbarem Rückblick „Beste Ladezeit der letzten Tage“', async (page) => {
   await mockSources(page, {});
   await page.goto(url());
   const r = await waitForRender(page);
   const key = (ts) => { const p = berlinParts(ts); return `${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')}`; };
   const exp = cheapestStartTimeOfDay(normalizePoints(base.points), { now: REFERENCE_NOW, lookbackHours: 72, slotHours: 4, wallClockKey: key });
-  assert.ok(exp.best, 'Erwartung berechenbar');
+  assert.ok(exp.best && exp.best.count >= 2, 'Erwartung berechenbar');
   assert.equal(r.startTime.key, exp.best.key);
-  assert.equal(r.startTime.count, exp.best.count);
-  assert.ok(exp.best.count >= 2);
-  assert.equal(await text(page, '#start-time [data-field="time"]'), `${exp.best.key} Uhr`);
-  assert.equal(await text(page, '#start-time [data-field="ct"]'), formatCt(exp.best.meanPrice).replace(/\s+/g, ' '));
-  assert.match(await text(page, '#start-time .start-lead'), /^Gemessen an den Strompreisen der vergangenen 72 Stunden haben Sie durchschnittlich das günstigste 4-stündige Lade-Zeitfenster, wenn Sie um diese Uhrzeit Ihre Ladung gestartet hätten:$/);
-  assert.match(await text(page, '#start-time [data-field="days"]'), /^Durchschnitt aus [23] Tagen \(ct\/kWh\): (Fr\., 25\.09\. [\d,−]+ · )?Sa\., 26\.09\. [\d,−]+ · So\., 27\.09\. [\d,−]+\.$/);
-  assert.match(await text(page, '#start-time [data-field="runner"]'), /^Zweitbeste Startzeit: \d\d:\d\d Uhr \(Ø ca\. .* ct\/kWh\)\.$/);
-  // Position: direkt nach dem Diagramm, vor der Hero-Karte; komplett orange
-  const chartBox = await page.locator('#chart-card').boundingBox();
-  const cardBox = await page.locator('#start-time').boundingBox();
-  const heroBox = await page.locator('#hero').boundingBox();
-  const outlookBox = await page.locator('#outlook').boundingBox();
-  assert.ok(chartBox.y < outlookBox.y && outlookBox.y < cardBox.y && cardBox.y < heroBox.y, 'Reihenfolge Diagramm → Kommend → Empfehlung → Vergangen');
-  assert.equal(await page.locator('#start-time').evaluate((el) => getComputedStyle(el).backgroundColor), 'rgb(240, 138, 46)');
-  assert.equal(await page.locator('#start-time').getAttribute('data-state'), 'ready');
+  // Die frühere separate Empfehlungskarte gibt es nicht mehr
+  assert.equal(await page.locator('#start-time').count(), 0);
+  // Karte „Kommend“ ist orange mit dunkler Schrift
+  assert.equal(await page.locator('#outlook').evaluate((el) => getComputedStyle(el).backgroundColor), 'rgb(240, 138, 46)');
+  assert.equal(await page.locator('#outlook .hero-time').evaluate((el) => getComputedStyle(el).color), 'rgb(11, 11, 11)');
+  // Rückblick ist eingeklappt, Überschrift sichtbar
+  assert.equal(await page.locator('#outlook #startzeit').evaluate((d) => d.tagName === 'DETAILS' && !d.open), true);
+  assert.equal(await text(page, '#startzeit > summary'), 'Beste Ladezeit der letzten Tage');
+  assert.equal(await page.locator('#startzeit [data-field="st-text"]').isVisible(), false);
+  await page.locator('#startzeit > summary').click();
+  assert.equal(await page.locator('#startzeit [data-field="st-text"]').isVisible(), true);
+  assert.equal(await text(page, '#startzeit [data-field="st-text"]'), expectedStartText(exp.best));
+  assert.equal(await text(page, '#startzeit strong'), `${exp.best.key} Uhr`);
+  // Reihenfolge: Diagramm → Kommend (orange) → Vergangen
+  const ys = await Promise.all(['#chart-card', '#outlook', '#hero'].map(async (sel) => (await page.locator(sel).boundingBox()).y));
+  assert.ok(ys[0] < ys[1] && ys[1] < ys[2], `Reihenfolge: ${ys.join(' / ')}`);
 });
 
-await scenario('Empfehlungskarte ohne ausreichende Daten zeigt einen Hinweis', async (page) => {
+await scenario('Rückblick ohne ausreichende Daten zeigt einen Hinweis', async (page) => {
   const fixtures = buildFixtureSet({ now: REFERENCE_NOW });
   // nur die letzten 26 h behalten: jede Uhrzeit hat höchstens ein vollständiges Fenster
   const pts = fixtures.points.filter((p) => p.start >= REFERENCE_NOW - 26 * HOUR);
@@ -579,8 +588,10 @@ await scenario('Empfehlungskarte ohne ausreichende Daten zeigt einen Hinweis', a
   const r = await waitForRender(page);
   assert.equal(r.sourceId, 'energy-charts');
   assert.equal(r.startTime, null);
-  assert.equal(await page.locator('#start-time [data-field="empty"]').isVisible(), true);
-  assert.equal(await text(page, '#start-time [data-field="time"]'), '–');
+  await page.locator('#startzeit > summary').click();
+  assert.equal(await page.locator('#startzeit [data-field="st-empty"]').isVisible(), true);
+  assert.equal(await text(page, '#startzeit [data-field="st-empty"]'), 'Für die letzten Tage liegen nicht genügend vollständige Preisdaten vor.');
+  assert.equal(await page.locator('#startzeit [data-field="st-text"]').isVisible(), false);
 });
 
 await scenario('Aufklappbare Abschnitte: Datenquellen und Rechtliches eingeklappt, Links öffnen sie', async (page) => {

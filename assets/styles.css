@@ -208,21 +208,28 @@ main { padding-bottom: 32px; }
   opacity: 0.6; transition: opacity 0.2s;
 }
 
-/* ---------- Empfehlung (orange) ---------- */
+/* ---------- Orange Karte (günstigstes kommendes Fenster) ---------- */
+/* In beiden Designs orange mit dunkler Schrift: die Farbtoken werden nur innerhalb der Karte umgestellt. */
 
-.card-orange { background: var(--orange); border-color: transparent; color: var(--orange-ink); color-scheme: light; }
-.card-orange .card-title, .card-orange .hero-ct, .card-orange .start-days { color: var(--orange-ink); }
-.card-orange .hero-price-label, .card-orange .hero-mwh, .card-orange .start-window, .card-orange .start-runner,
-.card-orange .footnote, .card-orange .hero-empty { color: var(--orange-ink-2); }
-.start-lead { margin-top: 8px; max-width: 70ch; }
-.start-time { font-size: clamp(40px, 11vw, 72px); font-weight: 750; letter-spacing: -0.02em; line-height: 1.05; margin-top: 8px; }
-@supports (font-size: 1cqi) { .card-orange { container-type: inline-size; } .start-time { font-size: clamp(40px, 9cqi, 72px); } }
-.start-price { margin-top: 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; }
-.start-window { font-size: 0.9375rem; }
-.start-days { margin-top: 8px; font-size: 0.9375rem; }
-.start-runner { margin-top: 4px; font-size: 0.9375rem; }
-.start-days:empty, .start-runner:empty { display: none; }
-[data-state="loading"] .start-time { color: transparent; background: rgba(11, 11, 11, 0.12); border-radius: 8px; min-width: 5ch; min-height: 1.05em; }
+.card-orange {
+  --ink: var(--orange-ink);
+  --ink-2: var(--orange-ink-2);
+  --muted: var(--orange-ink-2);
+  --grid: rgba(11, 11, 11, 0.2);
+  --border: rgba(11, 11, 11, 0.18);
+  --surface-2: rgba(255, 255, 255, 0.4);
+  --future-wash: rgba(255, 255, 255, 0.4);
+  --shimmer: rgba(11, 11, 11, 0.12);
+  --link: var(--orange-ink);
+  --focus: var(--orange-ink);
+  color-scheme: light;
+  background: var(--orange);
+  border-color: transparent;
+  color: var(--ink);
+}
+.card-orange .card-details { margin-top: 16px; }
+.card-orange .card-details > summary h3 { font-size: 0.9375rem; }
+.card-orange .card-details p { margin-top: 6px; max-width: 70ch; }
 [data-refreshing="true"] .card-orange { opacity: 0.6; transition: opacity 0.2s; }
 
 /* ---------- Kennzahlen ---------- */
