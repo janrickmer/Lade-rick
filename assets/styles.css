@@ -328,7 +328,7 @@ td.neg { color: var(--ink); }
 .card-info h3 { color: var(--ink); }
 .source-list { margin: 8px 0 0; padding-left: 1.25rem; color: var(--ink-2); }
 .source-list li { margin-top: 6px; }
-.todo { border-left: 3px solid var(--warning); padding-left: 10px; }
+.imprint { font-style: normal; margin-top: 8px; color: var(--ink); line-height: 1.5; }
 
 .site-footer { border-top: 1px solid var(--border); padding: 20px 0 32px; font-size: 0.875rem; color: var(--ink-2); }
 .site-footer p + p { margin-top: 6px; }

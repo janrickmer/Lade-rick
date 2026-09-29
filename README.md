@@ -113,10 +113,9 @@ genügen. Die Content-Security-Policy in `index.html` erlaubt Verbindungen nur z
 nicht aktuell“ und lehnt ihn ab, sobald weniger als 4 Stunden Daten im Analysezeitraum liegen). Unter *Actions → GitHub Pages → Enable workflow* lässt er sich
 wieder aktivieren. Schlägt der stündliche Abruf fehl, bleibt der zuvor veröffentlichte Snapshot erhalten.
 
-**Vor dem Livegang zu erledigen:**
-
-- Impressum im Abschnitt „Impressum“ von `index.html` eintragen (§ 5 DDG); Datenschutzhinweis prüfen.
-- Einmal im Browser prüfen, welche Quelle tatsächlich live antwortet (Statuszeile unter dem Diagramm).
+**Rechtliches:** Impressum (§ 5 DDG), Haftungsausschluss und Datenschutzhinweis stehen im Info-Abschnitt von
+`index.html`. Änderungen an Anschrift oder Kontakt dort pflegen. Nach dem Livegang einmal im Browser prüfen, welche
+Quelle tatsächlich live antwortet (Statuszeile unter dem Diagramm).
 
 ## Lizenz
 
