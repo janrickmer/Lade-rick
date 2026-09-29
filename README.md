@@ -10,9 +10,10 @@ gibt dessen ungefähren Durchschnittspreis an. Keine Anmeldung, keine Cookies, k
   Vergleich zum 72-h-Durchschnitt.
 - **Ausblick**: günstigstes 4-h-Fenster in den bereits veröffentlichten Preisen ab jetzt (Day-Ahead-Preise für
   den Folgetag erscheinen täglich gegen 13 Uhr) – klar als „kommend“ gekennzeichnet, keine Prognose.
-- **Preisverlauf** ganz oben als SVG-Chart mit wählbarem Zeitraum (24 / 48 / 72 Stunden Rückblick, die bekannten
-  kommenden Preise werden immer angehängt), Nulllinie für negative Preise, „Jetzt“-Linie, markiertem Fenster,
-  Tooltip/Ablesezeile, Tastaturnavigation, plus Tabellenansicht.
+- **Preisverlauf** ganz oben als SVG-Chart mit wählbarem Zeitraum in Kalendertagen (1 Tag = heute, 2 Tage = heute und
+  morgen, 3 Tage = gestern bis morgen; solange die Preise für morgen noch nicht veröffentlicht sind, rückt der Zeitraum
+  einen Tag zurück), Nulllinie für negative Preise, „Jetzt“-Linie, markiertem Fenster, Tooltip/Ablesezeile,
+  Tastaturnavigation, plus Tabellenansicht.
 - **Kennzahlen**: aktueller Börsenpreis, Minimum und Maximum der letzten 72 Stunden.
 - **Seriöse Quellen mit Fallback-Kette**: Bundesnetzagentur | SMARD.de → Energy-Charts (Fraunhofer ISE) →
   aWATTar → serverseitiger Zwischenspeicher. Die genutzte Quelle steht mit Lizenz in der Statuszeile.

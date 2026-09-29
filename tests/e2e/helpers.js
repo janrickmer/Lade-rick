@@ -94,8 +94,10 @@ export async function waitForRender(page, { timeout = 15000 } = {}) {
       range: s.result?.range ?? null,
       upcoming: s.upcoming ? { start: s.upcoming.start, end: s.upcoming.end, meanPrice: s.upcoming.meanPrice } : null,
       current: s.current ?? null,
-      viewHours: s.viewHours ?? null,
+      viewDays: s.viewDays ?? null,
       viewStart: s.viewStart ?? null,
+      viewEnd: s.viewEnd ?? null,
+      viewLabel: s.viewLabel ?? null,
     }));
   });
 }

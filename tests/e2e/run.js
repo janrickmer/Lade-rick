@@ -70,8 +70,9 @@ await scenario('Standardfall: SMARD liefert, Hero/Ausblick/Kennzahlen/Chart/Tabe
   assert.match(await text(page, '#hero [data-field="range"]'), /Analysiert: .* \(72 h\)\./);
   // Diagramm steht ganz oben, vor der Hero-Karte
   assert.ok((await page.locator('#chart-card').boundingBox()).y < (await page.locator('#hero').boundingBox()).y, 'Chart über der Hero-Karte');
-  assert.equal(await page.locator('#range-72').isChecked(), true);
-  assert.match(await text(page, '#chart-subtitle'), /^Letzte 72 h \+ bekannte Preise · /);
+  assert.equal(await page.locator('#range-3').isChecked(), true);
+  assert.equal(await text(page, '#chart-subtitle'), 'Gestern bis morgen · So., 27.09., 00:00 – Di., 29.09., 24:00 Uhr · 15-Minuten-Werte');
+  assert.equal(await text(page, '#range-hint'), 'Gestern bis morgen: So., 27.09., 00:00 – Di., 29.09., 24:00 Uhr.');
   assert.equal(await page.locator('#hero [data-field="empty"]').isHidden(), true);
   assert.equal(await page.locator('#hero').getAttribute('data-state'), 'ready');
 
@@ -101,7 +102,8 @@ await scenario('Standardfall: SMARD liefert, Hero/Ausblick/Kennzahlen/Chart/Tabe
   assert.match(await text(page, '#chart-subtitle'), /15-Minuten-Werte$/);
 
   // Tabelle: alle Punkte ab Analysebeginn
-  const rowsExpected = base.points.filter((p) => p.end > r.viewStart).length;
+  const rowsExpected = base.points.filter((p) => p.end > r.viewStart && p.start < r.viewEnd).length;
+  assert.equal(rowsExpected, 3 * 96);
   assert.equal(await page.locator('#price-table tbody tr').count(), rowsExpected);
   assert.match(await text(page, '#table-summary'), new RegExp(`\\(${rowsExpected} Zeilen\\)`));
   assert.equal(await page.locator('#price-table tbody tr.row-cheapest').count(), 16);
@@ -292,7 +294,7 @@ await scenario('Chart-Interaktion: Hover-Tooltip, Tastaturnavigation, Screenread
   const out = await text(page, '#chart-output');
   assert.match(out, /^Mo\., 28\.09\., 13:45 – 14:00 Uhr: .* ct\/kWh \(.* €\/MWh\)/);
   await page.keyboard.press('Home');
-  assert.match(await text(page, '#chart-output'), /^Fr\., 25\.09\., 14:00 – 14:15 Uhr/);
+  assert.match(await text(page, '#chart-output'), /^So\., 27\.09\., 00:00 – 00:15 Uhr/);
   await page.keyboard.press('End');
   assert.match(await text(page, '#chart-output'), /^Di\., 29\.09\., 23:45 – 24:00 Uhr.*kommend/);
   await page.keyboard.press('Escape');
@@ -405,7 +407,7 @@ await scenario('Touch: Tippen auf das Diagramm zeigt den getippten Slot in der A
   await page.touchscreen.tap(box.x + 20, box.y + 60);
   await page.waitForFunction(() => document.querySelector('#chart-readout').textContent.includes('ct/kWh'));
   const first = await text(page, '#chart-readout');
-  assert.match(first, /^(Fr\., 25\.09\.|Sa\., 26\.09\.), /, first);
+  assert.match(first, /^So\., 27\.09\., 0\d:/, first);
   await page.waitForTimeout(150);
   assert.equal(await text(page, '#chart-readout'), first, 'Auswahl bleibt nach dem Tippen erhalten');
   const box2 = await page.locator('#chart .hit-area').boundingBox();
@@ -480,37 +482,64 @@ await scenario('Veralteter Zwischenspeicher (gestern) zeigt Datum in der Statusz
   assert.match(await text(page, '#status-meta'), /abgerufen 28\.09\.2026, 14:00 Uhr/);
 }, { storage: { 'laderick:cache:v1': JSON.stringify({ savedAt: Date.now() - 2 * 60 * MINUTE, attempts: [], series: { points: buildFixtureSet({ now: REFERENCE_NOW }).points, resolutionMinutes: 15, fetchedAt: REFERENCE_NOW, source: { id: 'smard', name: 'SMARD.de (Bundesnetzagentur)', url: 'https://www.smard.de/', licence: 'CC BY 4.0', attribution: '', operator: 'Bundesnetzagentur' } } }) } });
 
-await scenario('Zeitraum-Umschalter: 24/48/72 h ändern Diagramm und Tabelle, Auswahl wird gemerkt', async (page) => {
+await scenario('Zeitraum-Umschalter in Kalendertagen: 1/2/3 Tage, Auswahl wird gemerkt', async (page) => {
   await mockSources(page, {});
   await page.goto(url());
-  const r72 = await waitForRender(page);
-  assert.equal(r72.viewHours, 72);
-  assert.equal(r72.viewStart, Date.parse('2026-09-25T12:00:00Z'));
-  const rows72 = await page.locator('#price-table tbody tr').count();
-  await page.locator('label[for="range-24"]').click();
-  await page.waitForFunction(() => window.__LADERICK__?.viewHours === 24);
-  const r24 = await waitForRender(page);
-  assert.equal(r24.viewStart, Date.parse('2026-09-27T12:00:00Z'));
-  assert.match(await text(page, '#chart-subtitle'), /^Letzte 24 h \+ bekannte Preise · So\., 27\.09\., 14:00 – Di\., 29\.09\., 24:00 Uhr · 15-Minuten-Werte$/);
-  const rows24 = await page.locator('#price-table tbody tr').count();
-  assert.equal(rows24, rows72 - 48 * 4);
+  const r3 = await waitForRender(page);
+  assert.equal(r3.viewDays, 3);
+  assert.equal(r3.viewLabel, 'Gestern bis morgen');
+  assert.equal(r3.viewStart, Date.parse('2026-09-26T22:00:00Z'));
+  assert.equal(r3.viewEnd, Date.parse('2026-09-29T22:00:00Z'));
+  assert.equal(await page.locator('#price-table tbody tr').count(), 3 * 96);
+
+  await page.locator('label[for="range-1"]').click();
+  await page.waitForFunction(() => window.__LADERICK__?.viewDays === 1);
+  const r1 = await waitForRender(page);
+  assert.equal(r1.viewStart, Date.parse('2026-09-27T22:00:00Z'));
+  assert.equal(r1.viewEnd, Date.parse('2026-09-28T22:00:00Z'));
+  assert.equal(await text(page, '#chart-subtitle'), 'Heute · Mo., 28.09., 00:00 – 24:00 Uhr · 15-Minuten-Werte');
+  assert.equal(await page.locator('#price-table tbody tr').count(), 96);
   assert.equal(await page.locator('#chart svg .now-line').count(), 1);
-  const bandVisible = r24.slot && r24.slot.end > r24.viewStart ? 1 : 0;
-  assert.equal(await page.locator('#chart svg .band-cheapest').count(), bandVisible, 'Band nur, wenn das Fenster in der Ansicht liegt');
-  assert.equal(await page.evaluate(() => localStorage.getItem('laderick:range')), '24');
-  await page.locator('label[for="range-48"]').click();
-  await page.waitForFunction(() => window.__LADERICK__?.viewHours === 48);
-  assert.equal((await waitForRender(page)).viewStart, Date.parse('2026-09-26T12:00:00Z'));
+  assert.equal(await page.locator('#chart svg .band-cheapest').count(), 0, 'Fenster von gestern liegt außerhalb der Tagesansicht');
+  assert.equal(await page.locator('#chart svg .outlook-box').count(), 0, 'Ausblick liegt morgen, außerhalb der Tagesansicht');
+  assert.equal(await page.evaluate(() => localStorage.getItem('laderick:days')), '1');
+
+  await page.locator('label[for="range-2"]').click();
+  await page.waitForFunction(() => window.__LADERICK__?.viewDays === 2);
+  const r2 = await waitForRender(page);
+  assert.equal(r2.viewLabel, 'Heute und morgen');
+  assert.equal(r2.viewStart, Date.parse('2026-09-27T22:00:00Z'));
+  assert.equal(r2.viewEnd, Date.parse('2026-09-29T22:00:00Z'));
+  assert.equal(await page.locator('#price-table tbody tr').count(), 2 * 96);
+  assert.equal(await page.locator('#chart svg .outlook-box').count(), 1);
+
   await page.reload();
   const again = await waitForRender(page);
-  assert.equal(again.viewHours, 48);
-  assert.equal(await page.locator('#range-48').isChecked(), true);
+  assert.equal(again.viewDays, 2);
+  assert.equal(await page.locator('#range-2').isChecked(), true);
   // Hero analysiert unabhängig von der Ansicht immer 72 h
   assert.match(await text(page, '#hero [data-field="range"]'), /\(72 h\)\./);
-  // Tastatur: Pfeiltasten auf dem Umschalter
-  await page.locator('#range-48').focus();
+  await page.locator('#range-2').focus();
   await page.keyboard.press('ArrowRight');
-  await page.waitForFunction(() => window.__LADERICK__?.viewHours === 72);
+  await page.waitForFunction(() => window.__LADERICK__?.viewDays === 3);
+});
+
+await scenario('Vor 13 Uhr (Morgenpreise unbekannt): 2 Tage = gestern und heute, Hinweis auf 13 Uhr', async (page) => {
+  const now = Date.parse('2026-09-28T08:00:00Z'); // Mo., 10:00 MESZ – Fixture kennt Preise nur bis heute 24:00
+  const fixtures = buildFixtureSet({ now });
+  await mockSources(page, { fixtures });
+  await page.goto(url(nowParam(now)));
+  const r = await waitForRender(page);
+  assert.equal(r.viewLabel, 'Vorgestern bis heute');
+  assert.equal(r.viewEnd, Date.parse('2026-09-28T22:00:00Z'));
+  assert.match(await text(page, '#range-hint'), /Die Preise für morgen erscheinen täglich gegen 13 Uhr\.$/);
+  await page.locator('label[for="range-2"]').click();
+  await page.waitForFunction(() => window.__LADERICK__?.viewDays === 2);
+  const r2 = await waitForRender(page);
+  assert.equal(r2.viewLabel, 'Gestern und heute');
+  assert.equal(r2.viewStart, Date.parse('2026-09-26T22:00:00Z'));
+  assert.equal(await text(page, '#chart-subtitle'), 'Gestern und heute · So., 27.09., 00:00 – Mo., 28.09., 24:00 Uhr · 15-Minuten-Werte');
+  assert.match(await text(page, '#status-msg'), /Die Preise für morgen erscheinen täglich gegen 13 Uhr\./);
 });
 
 // ---------------------------------------------------------------------------

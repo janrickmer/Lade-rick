@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   formatCt, formatMwh, formatDeltaPercent, formatComparison, formatWindow, formatRange, formatTimeRange,
   formatDayLabel, relativeDayWord, formatAgo, formatIn, berlinParts, formatZone, typographicMinus, formatDateTime,
-  formatEndTime, berlinOffsetMinutes, isAmbiguousWallTime,
+  formatEndTime, berlinOffsetMinutes, isAmbiguousWallTime, berlinDayStart, berlinDayStartOffset, computeView,
 } from '../../src/format.js';
 
 const NOW = Date.parse('2026-09-28T12:00:00Z'); // Mo., 28.09.2026 14:00 MESZ
@@ -133,4 +133,36 @@ test('formatAgo / formatIn', () => {
   assert.equal(formatIn(NOW + 3 * 3_600_000, NOW), 'in 3\u00a0Stunden');
   assert.equal(formatIn(NOW + 1260 * 60_000, NOW), 'in etwa 21\u00a0Stunden');
   assert.equal(formatIn(NOW + 3 * 86_400_000, NOW), 'in etwa 3\u00a0Tagen');
+});
+
+test('berlinDayStart / berlinDayStartOffset: Berliner Mitternacht, auch über Zeitumstellungen', () => {
+  const U = (x) => Date.parse(x);
+  assert.equal(berlinDayStart(U('2026-09-28T12:00:00Z')), U('2026-09-27T22:00:00Z'));
+  assert.equal(berlinDayStart(U('2026-09-27T22:00:00Z')), U('2026-09-27T22:00:00Z'));
+  assert.equal(berlinDayStart(U('2026-09-27T21:59:59Z')), U('2026-09-26T22:00:00Z'));
+  assert.equal(berlinDayStartOffset(U('2026-09-28T12:00:00Z'), 1), U('2026-09-28T22:00:00Z'));
+  assert.equal(berlinDayStartOffset(U('2026-09-28T12:00:00Z'), -2), U('2026-09-25T22:00:00Z'));
+  // Umstellung auf Winterzeit am 25.10.: der Tag hat 25 Stunden
+  assert.equal(berlinDayStart(U('2026-10-25T12:00:00Z')), U('2026-10-24T22:00:00Z'));
+  assert.equal(berlinDayStartOffset(U('2026-10-25T12:00:00Z'), 1), U('2026-10-25T23:00:00Z'));
+  assert.equal(berlinDayStartOffset(U('2026-10-24T12:00:00Z'), 2), U('2026-10-25T23:00:00Z'));
+  // Umstellung auf Sommerzeit am 29.03.: der Tag hat 23 Stunden
+  assert.equal(berlinDayStart(U('2026-03-29T12:00:00Z')), U('2026-03-28T23:00:00Z'));
+  assert.equal(berlinDayStartOffset(U('2026-03-29T12:00:00Z'), 1), U('2026-03-29T22:00:00Z'));
+});
+
+test('computeView: Kalendertage je nach Auswahl und Kenntnis der Morgenpreise', () => {
+  const U = (x) => Date.parse(x);
+  const now = U('2026-09-28T12:00:00Z'); // Mo., 14:00 MESZ
+  const knownTomorrow = U('2026-09-29T22:00:00Z'); // bis Di., 24:00
+  const knownToday = U('2026-09-28T22:00:00Z'); // bis Mo., 24:00
+  assert.deepEqual(computeView(now, knownTomorrow, 1), { viewStart: U('2026-09-27T22:00:00Z'), viewEnd: U('2026-09-28T22:00:00Z'), tomorrowKnown: true, label: 'Heute' });
+  assert.deepEqual(computeView(now, knownTomorrow, 2), { viewStart: U('2026-09-27T22:00:00Z'), viewEnd: U('2026-09-29T22:00:00Z'), tomorrowKnown: true, label: 'Heute und morgen' });
+  assert.deepEqual(computeView(now, knownTomorrow, 3), { viewStart: U('2026-09-26T22:00:00Z'), viewEnd: U('2026-09-29T22:00:00Z'), tomorrowKnown: true, label: 'Gestern bis morgen' });
+  assert.deepEqual(computeView(now, knownToday, 1), { viewStart: U('2026-09-27T22:00:00Z'), viewEnd: U('2026-09-28T22:00:00Z'), tomorrowKnown: false, label: 'Heute' });
+  assert.deepEqual(computeView(now, knownToday, 2), { viewStart: U('2026-09-26T22:00:00Z'), viewEnd: U('2026-09-28T22:00:00Z'), tomorrowKnown: false, label: 'Gestern und heute' });
+  assert.deepEqual(computeView(now, knownToday, 3), { viewStart: U('2026-09-25T22:00:00Z'), viewEnd: U('2026-09-28T22:00:00Z'), tomorrowKnown: false, label: 'Vorgestern bis heute' });
+  // weniger als eine Stunde Morgenpreise zählt noch nicht als „bekannt“
+  assert.equal(computeView(now, U('2026-09-28T22:30:00Z'), 2).tomorrowKnown, false);
+  assert.equal(computeView(now, null, 3).label, 'Vorgestern bis heute');
 });

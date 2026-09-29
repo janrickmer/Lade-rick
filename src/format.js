@@ -120,6 +120,22 @@ export function berlinParts(ts) {
   };
 }
 
+/** Beginn des Berliner Kalendertags (00:00 Europe/Berlin), in dem ts liegt, als Epoch-ms. */
+export function berlinDayStart(ts) {
+  const { ymd } = berlinParts(ts);
+  for (const offset of ['+02:00', '+01:00']) {
+    const cand = Date.parse(`${ymd}T00:00:00${offset}`);
+    const p = berlinParts(cand);
+    if (p.ymd === ymd && p.hour === 0 && p.minute === 0) return cand;
+  }
+  throw new Error(`Tagesbeginn nicht bestimmbar für ${ymd}`);
+}
+
+/** Beginn des Berliner Kalendertags `days` Tage nach (oder vor) dem Tag von ts – robust über Zeitumstellungen. */
+export function berlinDayStartOffset(ts, days) {
+  return berlinDayStart(berlinDayStart(ts) + days * 24 * 3_600_000 + 12 * 3_600_000);
+}
+
 /** UTC-Offset von Europe/Berlin in Minuten zum Zeitpunkt ts (60 = MEZ, 120 = MESZ). */
 export function berlinOffsetMinutes(ts) {
   const p = berlinParts(ts);
@@ -251,4 +267,26 @@ export function formatWindow(start, end, { now } = {}) {
     ? formatDayLabel(start, now)
     : `${formatDateShort(start)} → ${formatDateShort(end - 1)}`;
   return { main, overline, dst, note };
+}
+
+/**
+ * Sichtbarer Zeitraum des Diagramms in Kalendertagen (Europe/Berlin).
+ * 1 Tag: heute. 2/3 Tage: bis einschließlich morgen, sobald mindestens eine Stunde der Morgenpreise
+ * vorliegt, sonst bis einschließlich heute.
+ */
+export function computeView(now, lastKnownEnd, days) {
+  const today = berlinDayStart(now);
+  const tomorrow = berlinDayStartOffset(now, 1);
+  const tomorrowKnown = Number.isFinite(lastKnownEnd) && lastKnownEnd >= tomorrow + 3_600_000;
+  if (days <= 1) return { viewStart: today, viewEnd: tomorrow, tomorrowKnown, label: 'Heute' };
+  const endOffset = tomorrowKnown ? 2 : 1;
+  const viewEnd = berlinDayStartOffset(now, endOffset);
+  const viewStart = berlinDayStartOffset(now, endOffset - days);
+  const labels = {
+    '2:true': 'Heute und morgen',
+    '2:false': 'Gestern und heute',
+    '3:true': 'Gestern bis morgen',
+    '3:false': 'Vorgestern bis heute',
+  };
+  return { viewStart, viewEnd, tomorrowKnown, label: labels[`${days}:${tomorrowKnown}`] ?? `${days} Tage` };
 }

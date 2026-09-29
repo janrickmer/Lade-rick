@@ -22,9 +22,10 @@ export const config = Object.freeze({
   /** Angefragter Datenbereich relativ zu „jetzt“ (Tage zurück / voraus). */
   fetchDaysBack: 4,
   fetchDaysAhead: 2,
-  /** Wählbare Zeiträume für das Diagramm (Stunden Rückblick ab jetzt; bekannte künftige Preise kommen immer dazu). */
-  chartRangeOptions: [24, 48, 72],
-  chartRangeDefault: 72,
+  /** Wählbare Zeiträume für das Diagramm in Kalendertagen (Europe/Berlin): 1 = heute, 2 = heute und morgen
+   *  (vor Veröffentlichung der Morgenpreise: gestern und heute), 3 = gestern bis morgen (sonst vorgestern bis heute). */
+  chartDaysOptions: [1, 2, 3],
+  chartDaysDefault: 3,
   /** Gebotszone. */
   biddingZone: 'DE-LU',
 });

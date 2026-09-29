@@ -185,19 +185,27 @@ export function renderKpis({ current, result, now }) {
 
 // ---------- Chart-Kopf & Tabelle ----------
 
-export function renderChartMeta({ points, viewStart, viewHours, resolutionMinutes, now }) {
+export function renderChartMeta({ points, view, resolutionMinutes, now }) {
   $('#chart-card').dataset.state = 'ready';
   const lastEnd = points.length ? points[points.length - 1].end : now;
-  const xMin = viewStart ?? (points[0]?.start ?? now);
+  const xMin = view?.viewStart ?? (points[0]?.start ?? now);
+  const xMax = view?.viewEnd ?? Math.max(lastEnd, now);
   const resLabel = resolutionMinutes === 60 ? 'Stundenwerte' : `${resolutionMinutes}-Minuten-Werte`;
-  const spanLabel = viewHours ? `Letzte ${viewHours} h + bekannte Preise · ` : '';
-  $('#chart-subtitle').textContent = `${spanLabel}${formatRange(xMin, Math.max(lastEnd, now))} · ${resLabel}`;
+  const dayLabel = view?.label ? `${view.label} · ` : '';
+  $('#chart-subtitle').textContent = `${dayLabel}${formatRange(xMin, xMax)} · ${resLabel}`;
+  const hint = $('#range-hint');
+  if (hint) {
+    hint.textContent = view?.label
+      ? `${view.label}: ${formatRange(xMin, xMax)}.${view.tomorrowKnown ? '' : ' Die Preise für morgen erscheinen täglich gegen 13 Uhr.'}`
+      : '';
+  }
 }
 
-export function renderTable({ points, viewStart, slot, upcoming, now }) {
+export function renderTable({ points, view, slot, upcoming, now }) {
   const tbody = $('#price-table tbody');
-  const xMin = viewStart ?? (points[0]?.start ?? now);
-  const rows = points.filter((p) => p.end > xMin);
+  const xMin = view?.viewStart ?? (points[0]?.start ?? now);
+  const xMax = view?.viewEnd ?? Infinity;
+  const rows = points.filter((p) => p.end > xMin && p.start < xMax);
   tbody.replaceChildren();
   const frag = document.createDocumentFragment();
   for (const p of rows) {

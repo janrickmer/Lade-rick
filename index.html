@@ -61,11 +61,11 @@
       <fieldset class="range-picker" id="range-picker">
         <legend class="range-legend">Zeitraum</legend>
         <div class="segmented">
-          <input type="radio" name="range" id="range-24" value="24"><label for="range-24">24&nbsp;h</label>
-          <input type="radio" name="range" id="range-48" value="48"><label for="range-48">48&nbsp;h</label>
-          <input type="radio" name="range" id="range-72" value="72" checked><label for="range-72">72&nbsp;h</label>
+          <input type="radio" name="range" id="range-1" value="1"><label for="range-1">1&nbsp;Tag</label>
+          <input type="radio" name="range" id="range-2" value="2"><label for="range-2">2&nbsp;Tage</label>
+          <input type="radio" name="range" id="range-3" value="3" checked><label for="range-3">3&nbsp;Tage</label>
         </div>
-        <p class="range-hint muted">Rückblick ab jetzt, plus die bereits bekannten Preise für die kommenden Stunden.</p>
+        <p class="range-hint muted" id="range-hint">Kalendertage: heute, heute und morgen, gestern bis morgen.</p>
       </fieldset>
       <p id="chart-readout" class="chart-readout" aria-hidden="true">&nbsp;</p>
       <div id="chart" class="chart" tabindex="0" role="group" aria-label="Preisverlauf, mit Pfeiltasten navigierbar"></div>
