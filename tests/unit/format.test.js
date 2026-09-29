@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   formatCt, formatMwh, formatDeltaPercent, formatComparison, formatWindow, formatRange, formatTimeRange,
   formatDayLabel, relativeDayWord, formatAgo, formatIn, berlinParts, formatZone, typographicMinus, formatDateTime,
+  formatEndTime, berlinOffsetMinutes, isAmbiguousWallTime,
 } from '../../src/format.js';
 
 const NOW = Date.parse('2026-09-28T12:00:00Z'); // Mo., 28.09.2026 14:00 MESZ
@@ -30,23 +31,49 @@ test('formatComparison: Prozent nur bei Bereichsmittel ≥ 2 ct/kWh, sonst absol
   assert.equal(formatComparison(-10, -3), '0,7 ct/kWh unter dem Durchschnitt der letzten 36 h (−0,3 ct/kWh)');
   assert.equal(formatComparison(-8, 3), '1,1 ct/kWh unter dem Durchschnitt der letzten 36 h (0,3 ct/kWh)');
   assert.equal(formatComparison(3, 3.2), 'entspricht dem Durchschnitt der letzten 36 h (0,3 ct/kWh)');
+  assert.equal(formatComparison(-6.7, 66.1), '7,3\u00a0ct/kWh unter dem Durchschnitt der letzten 36 h (6,6\u00a0ct/kWh)');
   assert.equal(formatComparison(NaN, 3), null);
   assert.equal(formatComparison(5, 10, { rangeLabel: 'des Zeitraums' }), '0,5 ct/kWh unter dem Durchschnitt des Zeitraums (1,0 ct/kWh)');
 });
 
 test('formatWindow: Zeitumstellung Oktober (T12)', () => {
   const w = formatWindow(Date.UTC(2026, 9, 25, 0), Date.UTC(2026, 9, 25, 4));
-  assert.ok(w.main.includes('02:00') && w.main.includes('05:00'), w.main);
-  assert.ok(w.main.includes('MESZ') && w.main.includes('MEZ'), w.main);
-  assert.ok(w.main.includes('Zeitumstellung'), w.main);
+  assert.equal(w.main, '02:00\u00a0MESZ\u2009–\u200905:00\u00a0MEZ');
+  assert.equal(w.note, '4\u00a0h, Zeitumstellung');
   assert.equal(w.dst, true);
+  // Fenster endet genau auf der Umstellung (01:00 UTC): Ende im alten Offset, Hinweis trotzdem
+  const edge = formatWindow(Date.UTC(2026, 9, 24, 21), Date.UTC(2026, 9, 25, 1));
+  assert.equal(edge.main, '23:00\u00a0MESZ\u2009–\u200903:00\u00a0MESZ');
+  assert.equal(edge.dst, true);
+  assert.equal(edge.note, '4\u00a0h, Zeitumstellung');
 });
 
 test('formatWindow: Zeitumstellung März (T12)', () => {
   const w = formatWindow(Date.UTC(2026, 2, 29, 0), Date.UTC(2026, 2, 29, 4));
-  assert.ok(w.main.includes('01:00') && w.main.includes('06:00'), w.main);
-  assert.ok(w.main.includes('Zeitumstellung'), w.main);
+  assert.equal(w.main, '01:00\u00a0MEZ\u2009–\u200906:00\u00a0MESZ');
+  assert.equal(w.note, '4\u00a0h, Zeitumstellung');
   assert.equal(w.dst, true);
+  const edge = formatWindow(Date.UTC(2026, 2, 28, 21), Date.UTC(2026, 2, 29, 1));
+  assert.equal(edge.main, '22:00\u00a0MEZ\u2009–\u200902:00\u00a0MEZ');
+  assert.equal(edge.dst, true);
+  const normal = formatWindow(Date.UTC(2026, 8, 28, 0), Date.UTC(2026, 8, 28, 4));
+  assert.equal(normal.note, null);
+  assert.equal(normal.dst, false);
+});
+
+test('formatRange / formatTimeRange / formatEndTime an der Zeitumstellung', () => {
+  const U = (s) => Date.parse(s);
+  assert.equal(formatRange(U('2026-10-25T00:45:00Z'), U('2026-10-25T01:00:00Z')), 'So., 25.10., 02:45\u2009–\u200903:00\u00a0Uhr (MESZ)');
+  assert.equal(formatRange(U('2026-10-25T00:00:00Z'), U('2026-10-25T01:00:00Z')), 'So., 25.10., 02:00\u2009–\u200903:00\u00a0Uhr (MESZ)');
+  assert.equal(formatRange(U('2026-10-25T01:00:00Z'), U('2026-10-25T01:15:00Z')), 'So., 25.10., 02:00\u2009–\u200902:15\u00a0Uhr (MEZ)');
+  assert.equal(formatTimeRange(U('2026-10-25T00:45:00Z'), U('2026-10-25T01:00:00Z')), '02:45\u2009–\u200903:00\u00a0Uhr (MESZ)');
+  assert.equal(formatRange(U('2026-03-29T00:45:00Z'), U('2026-03-29T01:00:00Z')), 'So., 29.03., 01:45\u2009–\u200902:00\u00a0Uhr');
+  assert.equal(formatEndTime(U('2026-09-28T22:00:00Z')), '24:00');
+  assert.equal(formatEndTime(U('2026-09-28T12:15:00Z')), '14:15');
+  assert.equal(berlinOffsetMinutes(U('2026-10-25T00:59:00Z')), 120);
+  assert.equal(berlinOffsetMinutes(U('2026-10-25T01:00:00Z')), 60);
+  assert.equal(isAmbiguousWallTime(U('2026-10-25T00:30:00Z')), true);
+  assert.equal(isAmbiguousWallTime(U('2026-10-25T02:30:00Z')), false);
 });
 
 test('formatWindow: Tageswechsel zeigt beide Tage, Mitternachtsende als 24:00', () => {

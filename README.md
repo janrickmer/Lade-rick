@@ -98,6 +98,11 @@ ebenfalls, solange mindestens eine Quelle direkt erreichbar ist.
 **Anderer statischer Host:** Die Dateien `index.html`, `assets/`, `src/` (und optional `data/prices.json`)
 genügen. Die Content-Security-Policy in `index.html` erlaubt Verbindungen nur zu den drei Quellen.
 
+**Hinweis zu geplanten Workflows:** GitHub deaktiviert `schedule`-Trigger in öffentlichen Repositories nach
+60 Tagen ohne Commits. Dann bleibt der Snapshot stehen (die Seite meldet ihn nach 6 Stunden als „möglicherweise
+nicht aktuell“ und lehnt ihn nach 36 Stunden ab). Unter *Actions → GitHub Pages → Enable workflow* lässt er sich
+wieder aktivieren. Schlägt der stündliche Abruf fehl, bleibt der zuvor veröffentlichte Snapshot erhalten.
+
 **Vor dem Livegang zu erledigen:**
 
 - Impressum im Abschnitt „Impressum“ von `index.html` eintragen (§ 5 DDG); Datenschutzhinweis prüfen.

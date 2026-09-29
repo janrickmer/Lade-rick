@@ -27,7 +27,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Snapshot der Preisdaten erzeugen (fehlertolerant)
+      - id: pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Zuletzt veröffentlichten Snapshot als Rückfalloption holen
+        run: |
+          mkdir -p data
+          curl -fsSL --max-time 30 "${{ steps.pages.outputs.base_url }}/data/prices.json" -o data/prices.json \
+            && echo "Vorheriger Snapshot übernommen" || echo "Kein vorheriger Snapshot vorhanden"
+      - name: Snapshot der Preisdaten erzeugen (fehlertolerant, überschreibt nur bei Erfolg)
         run: node scripts/fetch-snapshot.js --tolerant
       - name: Seite zusammenstellen
         run: |

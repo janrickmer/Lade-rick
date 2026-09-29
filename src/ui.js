@@ -3,7 +3,7 @@
 
 import {
   formatCt, formatMwh, formatComparison, formatWindow, formatRange, formatTimeRange, formatTime, formatDateShort,
-  formatDateTime, formatAgo, formatIn, berlinParts,
+  formatDateTime, formatAgo, formatIn, berlinParts, formatEndTime,
 } from './format.js';
 import { HOUR } from './analysis.js';
 
@@ -21,7 +21,7 @@ export function sourceLabel(meta) {
   if (!meta) return 'unbekannt';
   switch (meta.id) {
     case 'smard': return 'Bundesnetzagentur | SMARD.de (CC BY 4.0)';
-    case 'energy-charts': return 'Energy-Charts (Fraunhofer ISE), CC BY 4.0';
+    case 'energy-charts': return 'Bundesnetzagentur | SMARD.de via Energy-Charts (Fraunhofer ISE), CC BY 4.0';
     case 'awattar': return 'aWATTar-API (EPEX-SPOT-Day-Ahead-Preise)';
     default: return meta.name ?? meta.id;
   }
@@ -59,9 +59,7 @@ const NEGATIVE_HINT = 'Überangebot (viel Wind und Sonne) – Erzeuger zahlen f�
 
 /** „bis Di., 24:00 Uhr“ für den letzten bekannten Zeitpunkt (Slot-Ende). */
 export function formatKnownUntil(ts) {
-  const parts = berlinParts(ts);
-  const endsAtMidnight = parts.hour === 0 && parts.minute === 0;
-  return endsAtMidnight ? `${formatDateShort(ts - 1)}, 24:00 Uhr` : `${formatDateShort(ts)}, ${formatTime(ts)} Uhr`;
+  return `${formatDateShort(ts - 1)}, ${formatEndTime(ts)} Uhr`;
 }
 
 // ---------- Hero (vergangene 36 h) ----------
@@ -83,6 +81,7 @@ export function renderHero(result, { now }) {
     setField(root, 'ct', '–');
     setField(root, 'mwh', '');
     setField(root, 'compare', '');
+    setField(root, 'note', '');
     setChips(root, 'flags', []);
     setField(root, 'ended', '');
     setField(root, 'range', result?.range ? rangeText(result) : '');
@@ -94,7 +93,8 @@ export function renderHero(result, { now }) {
   const { slot } = result;
   const w = formatWindow(slot.start, slot.end, { now });
   setField(root, 'day', w.overline);
-  setField(root, 'time', w.main);
+  setField(root, 'time', w.main).dataset.dst = w.dst ? 'true' : 'false';
+  setField(root, 'note', w.note ? `Fenster über die Zeitumstellung: ${w.note}.` : '');
   setField(root, 'ct', formatCt(slot.meanPrice));
   setField(root, 'mwh', `(≈ ${formatMwh(slot.meanPrice)})`);
   setField(root, 'compare', formatComparison(slot.meanPrice, result.rangeMean, { rangeLabel }) ?? '');
@@ -113,8 +113,8 @@ function rangeText(result) {
   const base = `Analysiert: ${formatRange(range.start, range.end)}`;
   if (range.coverage >= 0.999) return `${base} (${lookbackHours} h).`;
   if (range.coveredMs <= 0) return `${base} – keine Daten in diesem Zeitraum.`;
-  const from = range.dataStart ? ` ab ${formatDateShort(range.dataStart)}, ${formatTime(range.dataStart)} Uhr` : '';
-  return `${base} – Daten liegen für ${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 }).format(covered)} von ${lookbackHours} h vor${from}.`;
+  const span = range.dataStart && range.dataEnd ? ` (${formatRange(range.dataStart, range.dataEnd)})` : '';
+  return `${base} – Daten liegen nur für ${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 }).format(covered)} von ${lookbackHours} h vor${span}.`;
 }
 
 // ---------- Ausblick ----------
@@ -134,6 +134,7 @@ export function renderOutlook(upcoming, { now, knownUntil }) {
     setField(root, 'ct', '–');
     setField(root, 'mwh', '');
     setChips(root, 'flags', []);
+    setField(root, 'note', '');
     setField(root, 'starts', '');
     empty.hidden = false;
     empty.textContent = 'Für die nächsten Stunden liegen noch keine 4 Stunden lückenlose Preise vor. Die Preise für morgen erscheinen täglich gegen 13 Uhr.';
@@ -142,12 +143,13 @@ export function renderOutlook(upcoming, { now, knownUntil }) {
   empty.hidden = true;
   const w = formatWindow(upcoming.start, upcoming.end, { now });
   setField(root, 'day', w.overline);
-  setField(root, 'time', w.main);
+  setField(root, 'time', w.main).dataset.dst = w.dst ? 'true' : 'false';
+  setField(root, 'note', w.note ? `Fenster über die Zeitumstellung: ${w.note}.` : '');
   setField(root, 'ct', formatCt(upcoming.meanPrice));
   setField(root, 'mwh', `(≈ ${formatMwh(upcoming.meanPrice)})`);
   setChips(root, 'flags', upcoming.meanPrice < 0 ? [{ text: 'negativer Preis', title: NEGATIVE_HINT }] : []);
   if (upcoming.start > now) setField(root, 'starts', `Beginnt ${formatIn(upcoming.start, now)}.`);
-  else setField(root, 'starts', `Läuft – noch bis ${formatTime(upcoming.end)} Uhr.`);
+  else setField(root, 'starts', `Läuft – noch bis ${formatEndTime(upcoming.end)} Uhr.`);
 }
 
 // ---------- Kennzahlen ----------
@@ -244,12 +246,12 @@ export function renderStatusMeta({ series, now, knownUntil }) {
     parts.push(`Daten: Zwischenspeicher vom ${formatDateTime(series.fetchedAt)} Uhr${series.snapshotOf ? ` (Quelle: ${sourceLabel(series.snapshotOf)})` : ''}`);
   } else {
     parts.push(`Daten: ${sourceLabel(series.source)}`);
-    parts.push(`abgerufen ${formatTime(series.fetchedAt)} Uhr`);
+    const sameDay = berlinParts(series.fetchedAt).ymd === berlinParts(now).ymd;
+    parts.push(`abgerufen ${sameDay ? formatTime(series.fetchedAt) : formatDateTime(series.fetchedAt)} Uhr`);
   }
   if (knownUntil) parts.push(`Preise bekannt bis ${formatKnownUntil(knownUntil)}`);
   if (series.deprecated) parts.push('Hinweis: Die Schnittstelle dieser Quelle ist als veraltet markiert');
   el.textContent = `${parts.join(' · ')}.`;
-  void now;
 }
 
 /** Nachricht nach erfolgreichem Laden (Fallback, Zwischenspeicher, Hinweis auf 13 Uhr). */
@@ -289,9 +291,12 @@ export function showError(attempts) {
   card.hidden = false;
   for (const id of ['#hero', '#outlook', '#kpi-current', '#kpi-min', '#kpi-max', '#chart-card']) {
     const el = $(id);
-    if (el && el.dataset.state === 'loading') el.dataset.state = 'error';
+    if (!el || el.dataset.state !== 'loading') continue;
+    el.dataset.state = 'error';
+    for (const name of ['time', 'ct', 'value']) setField(el, name, '–');
   }
-  $('#retry').focus({ preventScroll: true });
+  setStatusMessage('Preisdaten konnten nicht geladen werden.');
+  $('#retry').focus();
 }
 
 export function hideError() {

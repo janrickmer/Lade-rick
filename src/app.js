@@ -13,7 +13,9 @@ const THEME_KEY = 'laderick:theme';
 const params = new URLSearchParams(window.location.search);
 const nowParam = params.get('now');
 const nowOverride = nowParam ? Date.parse(nowParam) : NaN;
-const sourceOverride = params.get('source');
+const KNOWN_SOURCES = ['smard', 'energy-charts', 'awattar', 'snapshot'];
+const sourceParam = params.get('source');
+const sourceOverride = sourceParam && KNOWN_SOURCES.includes(sourceParam) ? sourceParam : null;
 const hasOverride = Number.isFinite(nowOverride) || Boolean(sourceOverride);
 
 const getNow = () => (Number.isFinite(nowOverride) ? nowOverride : Date.now());
@@ -28,14 +30,25 @@ const state = {
 
 // ---------- Zwischenspeicher (localStorage, nur Preisdaten, keine Nutzerdaten) ----------
 
+const CACHE_MAX_AGE_MS = 24 * 60 * MINUTE;
+
+function dropCache() {
+  try { window.localStorage.removeItem(CACHE_KEY); } catch { /* ignorieren */ }
+}
+
 function readCache() {
   try {
     const raw = window.localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!parsed || !Array.isArray(parsed.series?.points) || !Number.isFinite(parsed.savedAt)) return null;
+    const s = parsed?.series;
+    const valid = parsed && Number.isFinite(parsed.savedAt) && s && Array.isArray(s.points) && s.points.length > 0
+      && s.source && typeof s.source.id === 'string' && Number.isFinite(s.resolutionMinutes) && Number.isFinite(s.fetchedAt)
+      && s.points.every((p) => p && Number.isFinite(p.start) && Number.isFinite(p.end) && Number.isFinite(p.price));
+    if (!valid || Date.now() - parsed.savedAt > CACHE_MAX_AGE_MS) { dropCache(); return null; }
     return parsed;
   } catch {
+    dropCache();
     return null;
   }
 }
@@ -92,19 +105,39 @@ async function load({ force = false } = {}) {
   if (!force && !hadData && !hasOverride) {
     const cached = readCache();
     if (cached) {
-      state.series = cached.series;
-      state.attempts = cached.attempts ?? [];
-      state.lastFetchAt = cached.savedAt;
-      render({ fromCache: true });
-      ui.setStatusMessage(ui.statusAfterLoad({ series: cached.series, attempts: state.attempts, now, knownUntil: cached.series.points.at(-1)?.end ?? null }));
-      if (Date.now() - cached.savedAt < config.cacheTtlMinutes * MINUTE) {
-        state.loading = false;
-        return;
+      try {
+        state.series = cached.series;
+        state.attempts = Array.isArray(cached.attempts) ? cached.attempts : [];
+        state.lastFetchAt = cached.savedAt;
+        render({ fromCache: true });
+        ui.setStatusMessage(ui.statusAfterLoad({ series: cached.series, attempts: state.attempts, now, knownUntil: cached.series.points.at(-1)?.end ?? null }));
+        if (Date.now() - cached.savedAt < config.cacheTtlMinutes * MINUTE) {
+          state.loading = false;
+          return;
+        }
+      } catch (err) {
+        console.warn('Zwischenspeicher unbrauchbar, wird verworfen', err);
+        dropCache();
+        state.series = null;
+        state.attempts = [];
       }
     }
   }
 
   // 2) Netzabruf über die Fallback-Kette
+  try {
+    await fetchAndRender(now);
+  } catch (err) {
+    console.error('Laden fehlgeschlagen', err);
+    ui.setRefreshing(false);
+    if (!state.series) ui.showError(state.attempts);
+    else ui.setStatusMessage('Aktualisierung fehlgeschlagen – es werden die zuletzt geladenen Daten angezeigt.');
+  } finally {
+    state.loading = false;
+  }
+}
+
+async function fetchAndRender(now) {
   ui.setRefreshing(Boolean(state.series));
   if (!state.series) ui.setStatusMessage('Preisdaten werden geladen …');
   const order = sourceOverride ? [sourceOverride] : config.sourceOrder;
@@ -129,15 +162,18 @@ async function load({ force = false } = {}) {
     if (!hasOverride) writeCache(series, attempts);
     render();
   } else if (state.series) {
-    ui.setStatusMessage('Aktualisierung fehlgeschlagen – es werden die zuletzt geladenen Daten angezeigt.');
+    const age = Date.now() - state.lastFetchAt;
+    const ageText = age > 60 * MINUTE
+      ? `zuletzt geladen vor ${Math.round(age / (60 * MINUTE))}\u00a0Stunden`
+      : `zuletzt geladen vor ${Math.max(1, Math.round(age / MINUTE))}\u00a0Minuten`;
+    ui.setStatusMessage(`Aktualisierung fehlgeschlagen – es werden die zuletzt geladenen Daten angezeigt (${ageText}).`);
     state.attempts = attempts;
   } else {
-    ui.setStatusMessage('');
+    state.attempts = attempts;
     ui.showError(attempts);
     window.__LADERICK__ = { series: null, result: null, upcoming: null, current: null, attempts, now };
     document.dispatchEvent(new CustomEvent('laderick:rendered', { detail: window.__LADERICK__ }));
   }
-  state.loading = false;
 }
 
 // ---------- Theme ----------
@@ -151,9 +187,7 @@ function isDark() {
 
 function syncThemeButton() {
   const btn = document.getElementById('theme-toggle');
-  const dark = isDark();
-  btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
-  btn.textContent = dark ? 'Helles Design' : 'Dunkles Design';
+  btn.setAttribute('aria-pressed', isDark() ? 'true' : 'false');
 }
 
 function toggleTheme() {

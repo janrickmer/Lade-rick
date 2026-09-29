@@ -137,7 +137,9 @@ export class PriceChart {
     this.render();
     if (keepTs !== null) {
       const i = this.visible.findIndex((p) => p.start === keepTs);
-      if (i >= 0) { this.select(i); this.pinned = keepPinned; }
+      if (i >= 0) { this.select(i); this.pinned = keepPinned; } else this.clearSelection();
+    } else {
+      this.clearSelection();
     }
   }
 
@@ -287,16 +289,19 @@ export class PriceChart {
       text(gAxis, tx, MARGIN.top + plotH + 16, label, 'x-label', { 'text-anchor': 'middle' });
     }
     const midnights = berlinMidnights(xMin, xMax);
+    const labelFor = (t) => (short ? shortDayLabel(t) : formatDateShort(t));
+    const estWidth = (label) => label.length * 6.8;
     const dayLabelAt = [...midnights];
-    if (!midnights.length || midnights[0] > xMin + 2 * HOUR) dayLabelAt.unshift(xMin);
+    // Randbeschriftung nur, wenn sie nicht mit der ersten Mitternacht kollidiert (Mitternacht hat Vorrang)
+    if (!midnights.length || x(midnights[0]) - x(xMin) > estWidth(labelFor(xMin)) + 8) dayLabelAt.unshift(xMin);
     let lastRight = -Infinity;
     for (const t of dayLabelAt) {
       const tx = x(t);
-      const label = short ? shortDayLabel(t) : formatDateShort(t);
-      const estWidth = label.length * 6.8;
-      if (x(xMax) - tx < estWidth || tx + 3 < lastRight + 8) continue;
+      const label = labelFor(t);
+      const w = estWidth(label);
+      if (x(xMax) - tx < w || tx + 3 < lastRight + 8) continue;
       text(gAxis, tx + 3, MARGIN.top + plotH + 32, label, 'x-day');
-      lastRight = tx + 3 + estWidth;
+      lastRight = tx + 3 + w;
     }
 
     // Hover-Ebene
@@ -304,9 +309,18 @@ export class PriceChart {
     svgEl('circle', { class: 'marker', r: 4.5, cx: 0, cy: 0 }, gHover);
     const hit = svgEl('rect', { class: 'hit-area', x: MARGIN.left, y: MARGIN.top - 6, width: plotW, height: plotH + 6 + MARGIN.bottom }, svg);
     hit.addEventListener('pointermove', (e) => this.onPointer(e));
-    hit.addEventListener('pointerdown', (e) => this.onPointer(e, true));
-    hit.addEventListener('pointerleave', () => { if (!this.pinned) this.clearSelection(); });
-    hit.addEventListener('click', () => { this.pinned = !this.pinned; if (!this.pinned) this.clearSelection(); });
+    hit.addEventListener('pointerdown', (e) => {
+      this.pointerFocus = true;
+      this.lastPointerType = e.pointerType;
+      this.onPointer(e, true);
+      if (e.pointerType === 'touch') this.pinned = true;
+    });
+    hit.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch' && !this.pinned) this.clearSelection(); });
+    hit.addEventListener('click', () => {
+      if (this.lastPointerType === 'touch') return; // Tippen wählt und fixiert bereits (pointerdown)
+      this.pinned = !this.pinned;
+      if (!this.pinned) this.clearSelection();
+    });
 
     c.insertBefore(svg, this.tooltip);
     if (this.selected >= 0) this.select(this.selected);
@@ -429,6 +443,7 @@ export class PriceChart {
   }
 
   onFocus() {
+    if (this.pointerFocus) { this.pointerFocus = false; return; } // Fokus durch Zeiger/Tippen: Auswahl bleibt
     if (this.selected < 0 && this.state) this.selectNearest(this.state.now);
   }
 
@@ -437,7 +452,7 @@ export class PriceChart {
   }
 
   onKey(e) {
-    if (!this.visible.length) return;
+    if (!this.visible.length || e.altKey || e.ctrlKey || e.metaKey) return;
     const last = this.visible.length - 1;
     let next = null;
     switch (e.key) {

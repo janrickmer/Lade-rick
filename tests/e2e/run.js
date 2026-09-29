@@ -20,8 +20,8 @@ let passed = 0;
 
 const IGNORED_CONSOLE = /Failed to load resource|net::ERR_FAILED|status of (4|5)\d\d/;
 
-async function scenario(name, fn, { viewport = { width: 1200, height: 900 }, colorScheme = 'light', storage = null } = {}) {
-  const ctx = await browser.newContext({ viewport, colorScheme, locale: 'de-DE', timezoneId: 'Europe/Berlin' });
+async function scenario(name, fn, { viewport = { width: 1200, height: 900 }, colorScheme = 'light', storage = null, hasTouch = false } = {}) {
+  const ctx = await browser.newContext({ viewport, colorScheme, hasTouch, locale: 'de-DE', timezoneId: 'Europe/Berlin' });
   const page = await ctx.newPage();
   const consoleErrors = [];
   const pageErrors = [];
@@ -129,7 +129,7 @@ await scenario('Fallback: SMARD durch CORS blockiert → Energy-Charts, Statusme
   assert.equal(r.sourceId, 'energy-charts');
   assert.deepEqual(r.attempts.map((a) => [a.id, a.ok, a.kind ?? null]), [['smard', false, 'network'], ['energy-charts', true, null]]);
   assert.equal(await text(page, '#status-msg'), 'SMARD.de war nicht erreichbar – die Daten stammen von Energy-Charts.');
-  assert.match(await text(page, '#status-meta'), /^Daten: Energy-Charts \(Fraunhofer ISE\), CC BY 4\.0 · abgerufen/);
+  assert.match(await text(page, '#status-meta'), /^Daten: Bundesnetzagentur \| SMARD\.de via Energy-Charts \(Fraunhofer ISE\), CC BY 4\.0 · abgerufen/);
   assert.ok(log.some((u) => u.startsWith('https://api.energy-charts.info/price?bzn=DE-LU&start=2026-09-25&end=2026-09-30')), log.join('\n'));
 });
 
@@ -149,7 +149,7 @@ await scenario('Alle Live-Quellen scheitern → Snapshot (frisch) mit Hinweis', 
   const r = await waitForRender(page);
   assert.equal(r.sourceId, 'snapshot');
   assert.match(await text(page, '#status-msg'), /^Live-Abruf nicht möglich – zwischengespeicherte Daten vom 28\.09\.2026, 13:40 Uhr \(Quelle: Energy-Charts\)\.$/);
-  assert.match(await text(page, '#status-meta'), /^Daten: Zwischenspeicher vom 28\.09\.2026, 13:40 Uhr \(Quelle: Energy-Charts \(Fraunhofer ISE\), CC BY 4\.0\)/);
+  assert.match(await text(page, '#status-meta'), /^Daten: Zwischenspeicher vom 28\.09\.2026, 13:40 Uhr \(Quelle: Bundesnetzagentur \| SMARD\.de via Energy-Charts \(Fraunhofer ISE\), CC BY 4\.0\)/);
   assert.equal(await page.locator('#error-card').isHidden(), true);
 });
 
@@ -181,6 +181,12 @@ await scenario('Totalausfall → Fehlerkarte mit Fokus auf „Erneut versuchen�
   assert.match(await text(page, '#error-text'), /^Keine der Quellen \(SMARD\.de, Energy-Charts, aWATTar\) war erreichbar\./);
   assert.equal(await page.evaluate(() => document.activeElement?.id), 'retry');
   assert.equal(await page.locator('#hero').getAttribute('data-state'), 'error');
+  assert.equal(await text(page, '#status-msg'), 'Preisdaten konnten nicht geladen werden.');
+  assert.equal(await text(page, '#hero [data-field="time"]'), '–');
+  const cardBox = await page.locator('#error-card').boundingBox();
+  const heroBox = await page.locator('#hero').boundingBox();
+  assert.ok(cardBox.y < heroBox.y, 'Fehlerkarte steht über den Karten');
+  assert.ok(await page.locator('#retry').evaluate((el) => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= window.innerHeight; }), 'Retry-Button im sichtbaren Bereich');
   phase = 'up';
   await page.locator('#retry').click();
   await page.waitForFunction(() => window.__LADERICK__?.series?.source?.id === 'smard');
@@ -317,7 +323,7 @@ await scenario('Dunkles Design: folgt der Systemeinstellung, Umschalter speicher
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-theme')), null);
   assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(13, 13, 13)');
   assert.equal(await page.locator('#theme-toggle').getAttribute('aria-pressed'), 'true');
-  assert.equal(await text(page, '#theme-toggle'), 'Helles Design');
+  assert.equal(await text(page, '#theme-toggle'), 'Dunkles Design');
   assert.equal(await page.evaluate(() => localStorage.getItem('laderick:theme')), null);
   await page.screenshot({ path: resolve(SHOTS, 'desktop-dark.png'), fullPage: true });
   await page.locator('#theme-toggle').click();
@@ -353,10 +359,15 @@ await scenario('Zeitumstellung 25.10.2026: Fenster über die doppelte Stunde wir
   const r = await waitForRender(page);
   assert.equal(r.slot.start, switchUtc - 2 * HOUR);
   assert.equal(r.slot.end - r.slot.start, 4 * HOUR);
-  const t = await text(page, '#hero [data-field="time"]');
-  assert.match(t, /01:00 MESZ – 04:00 MEZ \(4 h, Zeitumstellung\)/);
+  assert.equal(await text(page, '#hero [data-field="time"]'), '01:00 MESZ – 04:00 MEZ');
+  assert.equal(await page.locator('#hero [data-field="time"]').getAttribute('data-dst'), 'true');
+  assert.equal(await text(page, '#hero [data-field="note"]'), 'Fenster über die Zeitumstellung: 4 h, Zeitumstellung.');
   assert.equal(await page.locator('#price-table tbody tr.row-cheapest').count(), 16);
-});
+  const rows = await page.locator('#price-table tbody tr.row-cheapest td:first-child').allTextContents();
+  assert.ok(rows.some((r) => /02:45\s*–\s*03:00\s*Uhr \(MESZ\)/.test(r)), rows.join(' | '));
+  const [sw, iw] = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
+  assert.equal(sw, iw, 'kein horizontaler Überlauf mit Zeitumstellungs-Fenster');
+}, { viewport: { width: 360, height: 780 } });
 
 await scenario('Stundenauflösung (SMARD fällt auf hour zurück): Kennzahl „Jetzt“ zeigt Stundenfenster', async (page) => {
   const hourly = buildFixtureSet({ now: REFERENCE_NOW, resolutionMinutes: 60 });
@@ -380,6 +391,89 @@ await scenario('Stundenauflösung (SMARD fällt auf hour zurück): Kennzahl „J
   assert.match(await text(page, '#chart-subtitle'), /Stundenwerte$/);
   assert.equal(r.range.end, Date.parse('2026-09-28T12:00:00Z'));
 });
+
+await scenario('Touch: Tippen auf das Diagramm zeigt den getippten Slot in der Ablesezeile und behält ihn', async (page) => {
+  await mockSources(page, {});
+  await page.goto(url());
+  await waitForRender(page);
+  await page.locator('#chart').scrollIntoViewIfNeeded();
+  const box = await page.locator('#chart .hit-area').boundingBox();
+  await page.touchscreen.tap(box.x + 20, box.y + 60);
+  await page.waitForFunction(() => document.querySelector('#chart-readout').textContent.includes('ct/kWh'));
+  const first = await text(page, '#chart-readout');
+  assert.match(first, /^So\., 27\.09\., (0\d|1[0-2]):/, first);
+  await page.waitForTimeout(150);
+  assert.equal(await text(page, '#chart-readout'), first, 'Auswahl bleibt nach dem Tippen erhalten');
+  await page.touchscreen.tap(box.x + box.width - 20, box.y + 60);
+  await page.waitForFunction(() => /Di\., 29\.09\., (1[5-9]|2[0-3]):/.test(document.querySelector('#chart-readout').textContent));
+  await page.waitForTimeout(150);
+  assert.match(await text(page, '#chart-readout'), /Di\., 29\.09\., (1[5-9]|2[0-3]):.*kommend/);
+}, { viewport: { width: 360, height: 780 }, hasTouch: true });
+
+await scenario('Kleines Display (320 px): Kennzahlen bleiben einzeilig, kein Überlauf', async (page) => {
+  await mockSources(page, {});
+  await page.goto(url());
+  await waitForRender(page);
+  await page.waitForTimeout(150);
+  const [sw, iw] = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
+  assert.equal(sw, iw);
+  const singleLine = await page.locator('.tile-value').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().height <= parseFloat(getComputedStyle(el).fontSize) * 1.6));
+  assert.ok(singleLine.every(Boolean), `Kennzahl umbricht: ${singleLine}`);
+  const inside = await page.locator('.tile-value').evaluateAll((els) => els.every((el) => el.getBoundingClientRect().right <= el.closest('.tile').getBoundingClientRect().right));
+  assert.ok(inside, 'Kennzahl bleibt in der Kachel');
+}, { viewport: { width: 320, height: 700 } });
+
+await scenario('Tablet (768 px): zweispaltige Hero-Karten ohne Überlauf', async (page) => {
+  await mockSources(page, {});
+  await page.goto(url());
+  await waitForRender(page);
+  await page.waitForTimeout(150);
+  const [sw, iw] = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
+  assert.equal(sw, iw);
+  const ok = await page.locator('.hero-time').evaluateAll((els) => els.every((el) => {
+    const r = el.getBoundingClientRect(); const c = el.closest('.card').getBoundingClientRect();
+    return r.right <= c.right && r.left >= c.left;
+  }));
+  assert.ok(ok, 'Zeitangaben bleiben innerhalb ihrer Karte');
+}, { viewport: { width: 768, height: 1024 } });
+
+await scenario('Ungültiger ?source=-Parameter wird ignoriert (kein Banner, normale Reihenfolge)', async (page) => {
+  await mockSources(page, {});
+  await page.goto(url(`${nowParam(REFERENCE_NOW)}&source=%3Cb%3Ehallo%3C%2Fb%3E`));
+  const r = await waitForRender(page);
+  assert.equal(r.sourceId, 'smard');
+  assert.doesNotMatch(await text(page, '#override-text'), /Quelle erzwungen/);
+});
+
+await scenario('Laufendes Ausblick-Fenster bis Mitternacht wird als „noch bis 24:00 Uhr“ beschrieben', async (page) => {
+  const now = Date.parse('2026-09-28T18:07:00Z'); // 20:07 MESZ – Fenster 20:00–24:00 läuft
+  const cheapStart = Date.parse('2026-09-28T18:00:00Z'); // 20:00 MESZ
+  const fixtures = buildFixtureSet({ now, price: (ts) => (ts >= cheapStart && ts < cheapStart + 4 * HOUR ? 1 : Math.max(syntheticPrice(ts), 5)) });
+  await mockSources(page, { fixtures });
+  await page.goto(url(nowParam(now)));
+  const r = await waitForRender(page);
+  assert.equal(r.upcoming.start, cheapStart);
+  assert.equal(await text(page, '#outlook [data-field="time"]'), '20:00 – 24:00 Uhr');
+  assert.equal(await text(page, '#outlook [data-field="starts"]'), 'Läuft – noch bis 24:00 Uhr.');
+});
+
+await scenario('Unbrauchbarer Zwischenspeicher wird verworfen und die Seite lädt normal', async (page) => {
+  await mockSources(page, {});
+  await page.goto(`${srv.baseUrl}/`);
+  const r = await waitForRender(page);
+  assert.equal(r.sourceId, 'smard');
+  const cache = await page.evaluate(() => JSON.parse(localStorage.getItem('laderick:cache:v1')));
+  assert.equal(cache?.series?.source?.id, 'smard', 'kaputter Eintrag wurde durch einen gültigen ersetzt');
+}, { storage: { 'laderick:cache:v1': JSON.stringify({ savedAt: Date.now(), series: { points: [{ start: 1, end: 2, price: 3 }] } }) } });
+
+await scenario('Veralteter Zwischenspeicher (gestern) zeigt Datum in der Statuszeile', async (page) => {
+  const fixtures = buildFixtureSet({ now: REFERENCE_NOW });
+  await mockSources(page, { fixtures, smard: 'cors', energyCharts: 'cors', awattar: 'cors', snapshot: 'missing' });
+  await page.goto(`${srv.baseUrl}/`); // Live-Zeit, kein Override: der Zwischenspeicher wird genutzt
+  const r = await waitForRender(page);
+  assert.equal(r.fromCache, true);
+  assert.match(await text(page, '#status-meta'), /abgerufen 28\.09\.2026, 14:00 Uhr/);
+}, { storage: { 'laderick:cache:v1': JSON.stringify({ savedAt: Date.now() - 2 * 60 * MINUTE, attempts: [], series: { points: buildFixtureSet({ now: REFERENCE_NOW }).points, resolutionMinutes: 15, fetchedAt: REFERENCE_NOW, source: { id: 'smard', name: 'SMARD.de (Bundesnetzagentur)', url: 'https://www.smard.de/', licence: 'CC BY 4.0', attribution: '', operator: 'Bundesnetzagentur' } } }) } });
 
 // ---------------------------------------------------------------------------
 

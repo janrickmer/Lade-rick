@@ -18,6 +18,7 @@ const dfDateShort = new Intl.DateTimeFormat(LOCALE, { timeZone: TIME_ZONE, weekd
 const dfDateTime = new Intl.DateTimeFormat(LOCALE, {
   timeZone: TIME_ZONE, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
 });
+const dfTimeUtc = new Intl.DateTimeFormat(LOCALE, { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' });
 const dfParts = new Intl.DateTimeFormat('en-CA', {
   timeZone: TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
 });
@@ -67,7 +68,7 @@ export function formatComparison(meanPrice, rangeMean, { rangeLabel = 'der letzt
   const diff = meanPrice - rangeMean; // EUR/MWh
   const avg = formatCt(rangeMean);
   if (Math.abs(diff) < 0.5) return `entspricht dem Durchschnitt ${rangeLabel} (${avg})`;
-  if (rangeMean >= 20) {
+  if (rangeMean >= 20 && meanPrice >= 0) {
     const pct = Math.round((Math.abs(diff) / rangeMean) * 100);
     return diff < 0
       ? `${pct}\u00a0% günstiger als der Durchschnitt ${rangeLabel} (${avg})`
@@ -119,24 +120,51 @@ export function berlinParts(ts) {
   };
 }
 
+/** UTC-Offset von Europe/Berlin in Minuten zum Zeitpunkt ts (60 = MEZ, 120 = MESZ). */
+export function berlinOffsetMinutes(ts) {
+  const p = berlinParts(ts);
+  const wall = Date.parse(`${p.ymd}T${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')}:00Z`);
+  const tsMinute = Math.floor(ts / 60_000) * 60_000;
+  return Math.round((wall - tsMinute) / 60_000);
+}
+
+/** Uhrzeit „hh:mm“ von ts, dargestellt mit dem Offset, der zum Zeitpunkt refTs galt. */
+export function formatTimeAs(ts, refTs) {
+  return dfTimeUtc.format(new Date(ts + berlinOffsetMinutes(refTs) * 60_000));
+}
+
+/**
+ * Endzeit eines Zeitabschnitts: im Offset, der kurz vor dem Ende galt (sonst liest sich das Ende an der
+ * Zeitumstellung als „02:45 – 02:00“); Mitternacht wird als „24:00“ geschrieben.
+ */
+export function formatEndTime(end) {
+  const label = formatTimeAs(end, end - 1);
+  return label === '00:00' ? '24:00' : label;
+}
+
+/** true, wenn die Wanduhrzeit von ts an diesem Tag doppelt vorkommt (Ende der Sommerzeit). */
+export function isAmbiguousWallTime(ts) {
+  const wall = (t) => { const p = berlinParts(t); return `${p.ymd} ${p.hour}:${p.minute}`; };
+  const w = wall(ts);
+  return w === wall(ts - 3_600_000) || w === wall(ts + 3_600_000);
+}
+
 /** „Mo., 28.09., 02:00 – 06:00 Uhr“ bzw. mit Tageswechsel „Mo., 28.09., 22:00 – Di., 29.09., 02:00 Uhr“. */
 export function formatRange(start, end) {
   const a = berlinParts(start);
-  const b = berlinParts(end);
-  const sameDay = a.ymd === b.ymd;
-  const endsAtMidnight = b.hour === 0 && b.minute === 0 && berlinParts(end - 1).ymd === a.ymd;
-  if (sameDay || endsAtMidnight) {
-    const endLabel = endsAtMidnight ? '24:00' : formatTime(end);
-    return `${formatDateShort(start)}, ${formatTime(start)} – ${endLabel} Uhr`;
+  const lastDay = berlinParts(end - 1).ymd;
+  const endLabel = formatEndTime(end);
+  const zone = isAmbiguousWallTime(start) ? ` (${formatZone(start)})` : '';
+  if (a.ymd === lastDay) {
+    return `${formatDateShort(start)}, ${formatTime(start)} – ${endLabel} Uhr${zone}`;
   }
-  return `${formatDateShort(start)}, ${formatTime(start)} – ${formatDateShort(end)}, ${formatTime(end)} Uhr`;
+  return `${formatDateShort(start)}, ${formatTime(start)} – ${formatDateShort(end - 1)}, ${endLabel} Uhr${zone}`;
 }
 
-/** Nur die Uhrzeiten: „02:00 – 06:00 Uhr“ (Tageswechsel wird über formatRange abgedeckt). */
+/** Nur die Uhrzeiten: „02:00 – 06:00 Uhr“ (Mitternacht als 24:00, doppelte Stunde mit Zonenkürzel). */
 export function formatTimeRange(start, end) {
-  const b = berlinParts(end);
-  const endsAtMidnight = b.hour === 0 && b.minute === 0;
-  return `${formatTime(start)} – ${endsAtMidnight ? '24:00' : formatTime(end)} Uhr`;
+  const zone = isAmbiguousWallTime(start) ? ` (${formatZone(start)})` : '';
+  return `${formatTime(start)} – ${formatEndTime(end)} Uhr${zone}`;
 }
 
 /** „vor 3 Minuten“, „vor 2 Stunden“ – grob, für die Statuszeile. */
@@ -198,29 +226,29 @@ export function formatDayLabel(ts, now) {
 }
 
 /**
- * Zeitfenster für die Anzeige: Uhrzeiten, bei Tageswechsel beide Wochentage, bei Zeitumstellung
- * innerhalb des Fensters die Zonenkürzel und ein Hinweis.
- * @returns {{ main:string, overline:string, dst:boolean }}
+ * Zeitfenster für die Anzeige: Uhrzeiten, bei Tageswechsel beide Tage, bei Zeitumstellung innerhalb des
+ * Fensters (oder genau an dessen Ende) die Zonenkürzel und ein Hinweis.
+ * @returns {{ main:string, overline:string, dst:boolean, note:string|null }}
  *  main: „03:00 – 07:00 Uhr“ | „22:00 – 02:00 Uhr“ | „02:00 MESZ – 05:00 MEZ“
  *  overline: „Dienstag, 29. Sept. · heute“ | „Mo., 28. Sept. → Di., 29. Sept.“
+ *  note: „4 h, Zeitumstellung“ oder null
  */
 export function formatWindow(start, end, { now } = {}) {
   const a = berlinParts(start);
-  const bParts = berlinParts(end);
-  const endsAtMidnight = bParts.hour === 0 && bParts.minute === 0;
-  const lastDay = berlinParts(end - 1).ymd; // Kalendertag, in dem das Fenster endet
+  const lastDay = berlinParts(end - 1).ymd;
   const sameDay = a.ymd === lastDay;
   const zoneA = formatZone(start);
   const zoneB = formatZone(end - 1);
-  const dst = zoneA !== zoneB;
-  const endLabel = sameDay && endsAtMidnight ? '24:00' : formatTime(end);
+  const zoneC = formatZone(end);
+  const dst = zoneA !== zoneB || zoneB !== zoneC;
+  const endLabel = formatEndTime(end);
   const hours = Math.round(((end - start) / 3_600_000) * 100) / 100;
-  let main = dst
-    ? `${formatTime(start)}\u00a0${zoneA}\u2009–\u2009${endLabel}\u00a0${zoneB}`
-    : `${formatTime(start)}\u2009–\u2009${endLabel}\u00a0Uhr`;
-  if (dst) main += ` (${new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 2 }).format(hours)}\u00a0h, Zeitumstellung)`;
+  const main = dst
+    ? `${formatTime(start)} ${zoneA} – ${endLabel} ${zoneB}`
+    : `${formatTime(start)} – ${endLabel} Uhr`;
+  const note = dst ? `${new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 2 }).format(hours)} h, Zeitumstellung` : null;
   const overline = sameDay
     ? formatDayLabel(start, now)
-    : `${formatDateShort(start).replace(/,\s*/, ', ')} → ${formatDateShort(end - 1).replace(/,\s*/, ', ')}`;
-  return { main, overline, dst };
+    : `${formatDateShort(start)} → ${formatDateShort(end - 1)}`;
+  return { main, overline, dst, note };
 }

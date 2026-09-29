@@ -42,10 +42,16 @@
 
     <p id="status-msg" class="status-msg" role="status" aria-live="polite">Preisdaten werden geladen …</p>
 
+    <div id="error-card" class="card card-error" role="alert" hidden>
+      <h2 class="card-title">Preisdaten konnten nicht geladen werden</h2>
+      <p id="error-text">Keine der Quellen (SMARD.de, Energy-Charts, aWATTar) war erreichbar. Bitte später erneut versuchen.</p>
+      <button id="retry" type="button" class="button">Erneut versuchen</button>
+    </div>
+
     <section class="hero-grid" aria-label="Günstigste Zeitfenster">
       <article id="hero" class="card card-hero" aria-labelledby="hero-title" data-state="loading">
         <p class="pill pill-past">Vergangen · letzte 36 Stunden</p>
-        <h2 id="hero-title" class="card-title">Günstigstes 4-Stunden-Fenster</h2>
+        <h2 id="hero-title" class="card-title">Günstigstes 4-Stunden-Fenster<span class="sr-only"> der letzten 36 Stunden</span></h2>
         <p class="hero-overline" data-field="day">&nbsp;</p>
         <p class="hero-time" data-field="time">&nbsp;</p>
         <p class="hero-price">
@@ -55,6 +61,7 @@
         </p>
         <p class="hero-compare" data-field="compare"></p>
         <p class="hero-flags" data-field="flags"></p>
+        <p class="hero-meta muted" data-field="note"></p>
         <p class="hero-meta muted" data-field="ended"></p>
         <p class="hero-meta muted" data-field="range"></p>
         <p class="hero-empty" data-field="empty" hidden></p>
@@ -63,7 +70,7 @@
 
       <article id="outlook" class="card card-outlook" aria-labelledby="outlook-title" data-state="loading">
         <p class="pill pill-future" data-field="pill">Kommend</p>
-        <h2 id="outlook-title" class="card-title">Günstigstes 4-Stunden-Fenster</h2>
+        <h2 id="outlook-title" class="card-title">Günstigstes 4-Stunden-Fenster<span class="sr-only"> (kommend)</span></h2>
         <p class="hero-overline" data-field="day">&nbsp;</p>
         <p class="hero-time hero-time-small" data-field="time">&nbsp;</p>
         <p class="hero-price hero-price-small">
@@ -72,6 +79,7 @@
           <span class="hero-mwh muted" data-field="mwh"></span>
         </p>
         <p class="hero-flags" data-field="flags"></p>
+        <p class="hero-meta muted" data-field="note"></p>
         <p class="hero-meta muted" data-field="starts"></p>
         <p class="hero-empty" data-field="empty" hidden></p>
         <p class="footnote muted">Feste, bereits veröffentlichte Börsenpreise – keine Prognose. Kann das laufende Zeitfenster einschließen.</p>
@@ -134,11 +142,6 @@
 
     <p id="status-meta" class="status-meta muted"></p>
 
-    <div id="error-card" class="card card-error" role="alert" hidden>
-      <h2 class="card-title">Preisdaten konnten nicht geladen werden</h2>
-      <p id="error-text">Keine der Quellen (SMARD.de, Energy-Charts, aWATTar) war erreichbar. Bitte später erneut versuchen.</p>
-      <button id="retry" type="button" class="button">Erneut versuchen</button>
-    </div>
 
     <section class="card card-info" id="info" aria-labelledby="info-title">
       <h2 id="info-title" class="card-title">Was zeigt LadeRick?</h2>
@@ -152,9 +155,11 @@
 
       <h3>Was heißt das für meinen Tarif?</h3>
       <p>Bei einem dynamischen Stromtarif setzt sich der Preis aus dem hier gezeigten Börsenpreis plus festen Bestandteilen
-        zusammen (Netzentgelt, Stromsteuer, Umlagen, Konzessionsabgabe, Anbieteraufschlag, 19&nbsp;% MwSt.). Nur der Börsenanteil
-        schwankt – das günstigste Fenster ist deshalb auch im Tarif das günstigste. Bei einem Festpreistarif ändert sich der
-        Preis nicht. Die konkreten Aufschläge unterscheiden sich je nach Netzgebiet und Anbieter; LadeRick zeigt sie nicht.</p>
+        zusammen (Netzentgelt, Stromsteuer, Umlagen, Konzessionsabgabe, Anbieteraufschlag, 19&nbsp;% MwSt.). In der Regel
+        schwankt nur der Börsenanteil – dann ist das günstigste Fenster auch im Tarif das günstigste. Ausnahmen: Bei
+        zeitvariablen Netzentgelten (§&nbsp;14a EnWG, Modul&nbsp;3) oder Tarifen mit Preisuntergrenze kann das günstigste
+        Tariffenster abweichen. Bei einem Festpreistarif ändert sich der Preis nicht. Die konkreten Aufschläge unterscheiden
+        sich je nach Netzgebiet und Anbieter; LadeRick zeigt sie nicht.</p>
 
       <h3>So wird das günstigste Fenster berechnet</h3>
       <p>Über die vergangenen 36 Stunden – bis zum Ende der letzten vollständig abgeschlossenen Viertelstunde – wird ein
@@ -167,8 +172,8 @@
 
       <h3>Negative Preise</h3>
       <p>An sonnigen oder windigen Tagen kann der Börsenpreis unter null fallen: Es gibt mehr Strom, als gebraucht wird, und
-        Erzeuger zahlen für die Abnahme. In dynamischen Tarifen wird der Börsenanteil dann gutgeschrieben; die festen
-        Bestandteile bleiben.</p>
+        Erzeuger zahlen für die Abnahme. In dynamischen Tarifen wird der Börsenanteil dann je nach Tarif gutgeschrieben oder
+        auf null begrenzt; die festen Bestandteile bleiben.</p>
 
       <h3 id="quellen">Datenquellen</h3>
       <p>LadeRick greift ausschließlich auf öffentliche, regelmäßig aktualisierte Quellen zu. Die erste erreichbare Quelle mit
@@ -192,7 +197,8 @@
         direkt bei den genannten Quellen ab; dabei sieht der jeweilige Anbieter (Bundesnetzagentur, Fraunhofer ISE, aWATTar) die
         IP-Adresse des Browsers. Wird die Seite über GitHub Pages (GitHub, Inc.) ausgeliefert, wird die IP-Adresse auch an GitHub
         übertragen. Im Browser werden lokal (localStorage, nicht übertragen) nur die gewählte Darstellung (hell/dunkel) und die
-        zuletzt geladenen Preisdaten für einige Minuten gespeichert.</p>
+        zuletzt geladenen Preisdaten gespeichert; die Preisdaten werden bis zu 10 Minuten wiederverwendet, beim nächsten Abruf
+        überschrieben und nach 24 Stunden verworfen.</p>
 
       <h3 id="impressum">Impressum</h3>
       <p class="todo">Hier die Angaben gemäß §&nbsp;5 DDG des Seitenbetreibers eintragen (Name, Anschrift, Kontakt). Bis dahin ist
