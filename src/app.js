@@ -97,7 +97,7 @@ function render({ fromCache = false } = {}) {
   const now = getNow();
   const result = cheapestSlot(series.points, { now, lookbackHours: config.lookbackHours, slotHours: config.slotHours });
   const upcoming = cheapestUpcomingSlot(series.points, { now, slotHours: config.slotHours });
-  const startTime = cheapestStartTimeOfDay(series.points, { now, lookbackHours: config.lookbackHours, slotHours: config.slotHours, wallClockKey: berlinWallClockKey });
+  const startTime = cheapestStartTimeOfDay(series.points, { now, lookbackHours: config.lookbackHours, slotHours: config.slotHours, wallClockKey: berlinWallClockKey, dayKey: (ts) => berlinParts(ts).ymd });
   const current = currentPoint(series.points, now);
   const knownUntil = series.points.length ? series.points[series.points.length - 1].end : null;
   const view = computeView(now, knownUntil, state.viewDays);

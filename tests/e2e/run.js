@@ -191,6 +191,8 @@ await scenario('Totalausfall → Fehlerkarte mit Fokus auf „Erneut versuchen�
   assert.equal(await page.locator('#hero').getAttribute('data-state'), 'error');
   assert.equal(await text(page, '#status-msg'), 'Preisdaten konnten nicht geladen werden.');
   assert.equal(await text(page, '#hero [data-field="time"]'), '–');
+  assert.equal(await text(page, '#startzeit [data-field="st-empty"]'), 'Keine Preisdaten verfügbar.');
+  assert.equal(await page.locator('#startzeit [data-field="st-text"]').evaluate((el) => el.hidden), true);
   const cardBox = await page.locator('#error-card').boundingBox();
   const heroBox = await page.locator('#hero').boundingBox();
   assert.ok(cardBox.y < heroBox.y, 'Fehlerkarte steht über den Karten');
@@ -550,14 +552,14 @@ await scenario('Vor 13 Uhr (Morgenpreise unbekannt): 2 Tage = gestern und heute,
 });
 
 const expectedStartText = (best) =>
-  `Im Durchschnitt der letzten 72 Stunden wäre ein Ladestart um ${best.key} Uhr am günstigsten gewesen (4 Stunden, Ø ca. ${formatCt(best.meanPrice).replace(/\s+/g, ' ')}, Mittel aus ${best.count} ${best.count === 1 ? 'Tag' : 'Tagen'}). Rückblick, keine Prognose.`;
+  `Im Durchschnitt der letzten 72 Stunden wäre ein Ladestart um ${best.key} Uhr am günstigsten gewesen (4 Stunden, ca. ${formatCt(best.meanPrice).replace(/\s+/g, ' ')} im Mittel aus ${best.count} ${best.count === 1 ? 'Tag' : 'Tagen'}). Rückblick, keine Prognose.`;
 
 await scenario('Orange Karte „Kommend“ mit aufklappbarem Rückblick „Beste Ladezeit der letzten Tage“', async (page) => {
   await mockSources(page, {});
   await page.goto(url());
   const r = await waitForRender(page);
   const key = (ts) => { const p = berlinParts(ts); return `${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')}`; };
-  const exp = cheapestStartTimeOfDay(normalizePoints(base.points), { now: REFERENCE_NOW, lookbackHours: 72, slotHours: 4, wallClockKey: key });
+  const exp = cheapestStartTimeOfDay(normalizePoints(base.points), { now: REFERENCE_NOW, lookbackHours: 72, slotHours: 4, wallClockKey: key, dayKey: (ts) => berlinParts(ts).ymd });
   assert.ok(exp.best && exp.best.count >= 2, 'Erwartung berechenbar');
   assert.equal(r.startTime.key, exp.best.key);
   // Die frühere separate Empfehlungskarte gibt es nicht mehr

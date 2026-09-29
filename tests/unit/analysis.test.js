@@ -5,6 +5,7 @@ import {
   cheapestUpcomingSlot, currentPoint, aggregateToResolution, weightedStats, evaluateWindows, resolutionAt,
   cheapestStartTimeOfDay,
 } from '../../src/analysis.js';
+import { berlinParts } from '../../src/format.js';
 
 const T0 = Date.parse('2026-09-27T00:00:00Z');
 const m = (h, min = 0) => T0 + h * HOUR + min * MINUTE;
@@ -422,4 +423,25 @@ test('cheapestStartTimeOfDay: Lücken, Stundenraster, keine Daten', () => {
   assert.equal(cheapestStartTimeOfDay([], { now: T0 }).best, null);
   const custom = cheapestStartTimeOfDay(hourly, { now: T0 + 72 * HOUR, wallClockKey: (ts) => `h${((ts - T0) / HOUR) % 24}` });
   assert.equal(custom.best.key, 'h0');
+});
+
+test('cheapestStartTimeOfDay: Umstellung auf Winterzeit – doppelte Uhrzeit zählt je Tag nur einmal', () => {
+  // Berliner Ortszeit 02:00–06:00 kostet 20, sonst 120; 25.10.2026 hat die Stunde 02:00 zweimal
+  const from = Date.parse('2026-10-23T00:00:00Z');
+  const pts = grid({ from, count: 4 * 96, price: (i, s) => { const h = berlinParts(s).hour; return h >= 2 && h < 6 ? 20 : 120; } });
+  const key = (ts) => { const p = berlinParts(ts); return `${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')}`; };
+  const dayKey = (ts) => berlinParts(ts).ymd;
+  const now = Date.parse('2026-10-26T12:00:00Z');
+  const r = cheapestStartTimeOfDay(pts, { now, lookbackHours: 72, slotHours: 4, wallClockKey: key, dayKey });
+  assert.equal(r.best.key, '02:00');
+  assert.equal(r.best.count, 3, 'drei Kalendertage, nicht vier Fenster');
+  assert.deepEqual(r.best.windows.map((w) => new Date(w.start).toISOString()), [
+    '2026-10-24T00:00:00.000Z', // Sa., 02:00 MESZ
+    '2026-10-25T00:00:00.000Z', // So., erstes 02:00 (MESZ); das zweite 02:00 (MEZ) entfällt
+    '2026-10-26T01:00:00.000Z', // Mo., 02:00 MEZ
+  ]);
+  approx(r.best.meanPrice, 20);
+  // Ohne Tages-Schlüssel (UTC-Tage) wären es am selben Kalendertag zwei Fenster gewesen
+  const utc = cheapestStartTimeOfDay(pts, { now, lookbackHours: 72, slotHours: 4, wallClockKey: key });
+  assert.equal(utc.best.key, '02:00');
 });

@@ -181,7 +181,7 @@ export function renderStartTime(result) {
   text.replaceChildren(
     `Im Durchschnitt der letzten ${hours} Stunden wäre ein Ladestart um `,
     time,
-    ` am günstigsten gewesen (${slot} Stunden, Ø ca. ${formatCt(best.meanPrice)}, Mittel aus ${best.count} ${best.count === 1 ? 'Tag' : 'Tagen'}). Rückblick, keine Prognose.`,
+    ` am günstigsten gewesen (${slot} Stunden, ca. ${formatCt(best.meanPrice)} im Mittel aus ${best.count} ${best.count === 1 ? 'Tag' : 'Tagen'}). Rückblick, keine Prognose.`,
   );
 }
 
@@ -336,6 +336,13 @@ export function showError(attempts) {
     if (!el || el.dataset.state !== 'loading') continue;
     el.dataset.state = 'error';
     for (const name of ['time', 'ct', 'value']) setField(el, name, '–');
+  }
+  const recap = $('#startzeit');
+  if (recap) {
+    $('[data-field="st-text"]', recap).hidden = true;
+    const recapEmpty = $('[data-field="st-empty"]', recap);
+    recapEmpty.hidden = false;
+    recapEmpty.textContent = 'Keine Preisdaten verfügbar.';
   }
   setStatusMessage('Preisdaten konnten nicht geladen werden.');
   $('#retry').focus();

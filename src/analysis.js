@@ -240,6 +240,11 @@ function utcWallClockKey(ts) {
   return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
 }
 
+/** Standard-Schlüssel für den Kalendertag (UTC, „YYYY-MM-DD“) – die App übergibt eine Europe/Berlin-Variante. */
+function utcDayKey(ts) {
+  return new Date(ts).toISOString().slice(0, 10);
+}
+
 /**
  * Beste Start-Uhrzeit für eine Ladung der Länge `slotHours`, gemittelt über die vergangenen `lookbackHours`:
  * Für jede Uhrzeit (Wanduhr-Schlüssel, z. B. „02:15“) werden alle vollständigen Fenster mit diesem Start
@@ -247,14 +252,16 @@ function utcWallClockKey(ts) {
  * und die Uhrzeit mit dem niedrigsten Durchschnitt gewinnt (Gleichstand → frühere Uhrzeit).
  * Uhrzeiten mit weniger als `minWindows` vollständigen Fenstern (z. B. wegen Lücken oder weil das Fenster in
  * die Zukunft reichen würde) werden nicht gewertet.
+ * Je Uhrzeit und Kalendertag zählt nur ein Fenster (das erste): Am Tag der Umstellung auf Winterzeit gibt es die
+ * Uhrzeiten 02:00–02:45 zweimal, sonst würde dieser Tag doppelt gewichtet. `count` ist damit die Zahl der Tage.
  *
  * @param {PricePoint[]} points normalisiert
  * @param {{ now:number, lookbackHours?:number, slotHours?:number, minWindows?:number, resolutionMinutes?:number,
- *           wallClockKey?:(ts:number)=>string }} opts
+ *           wallClockKey?:(ts:number)=>string, dayKey?:(ts:number)=>string }} opts
  * @returns {{ best: object|null, ranked: Array<{ key:string, meanPrice:number, count:number,
  *             windows:Array<{start:number,end:number,mean:number}> }>, range:{start:number,end:number}, minWindows:number }}
  */
-export function cheapestStartTimeOfDay(points, { now, lookbackHours = 72, slotHours = 4, minWindows = 2, resolutionMinutes, wallClockKey = utcWallClockKey } = {}) {
+export function cheapestStartTimeOfDay(points, { now, lookbackHours = 72, slotHours = 4, minWindows = 2, resolutionMinutes, wallClockKey = utcWallClockKey, dayKey = utcDayKey } = {}) {
   if (!Number.isFinite(now)) throw new TypeError('cheapestStartTimeOfDay: now fehlt');
   const res = resolutionMinutes ?? resolutionAt(points, now);
   const rangeEnd = floorToResolution(now, res);
@@ -262,8 +269,12 @@ export function cheapestStartTimeOfDay(points, { now, lookbackHours = 72, slotHo
   const windows = evaluateWindows(points, { rangeStart, rangeEnd, slotMs: slotHours * HOUR })
     .filter((w) => Math.abs(w.coverage - 1) <= 1e-6);
   const groups = new Map();
+  const seenDays = new Set();
   for (const w of windows) {
     const key = wallClockKey(w.start);
+    const perDay = `${key}|${dayKey(w.start)}`;
+    if (seenDays.has(perDay)) continue;
+    seenDays.add(perDay);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push({ start: w.start, end: w.end, mean: w.mean });
   }
