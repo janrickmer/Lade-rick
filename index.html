@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LadeRick – Börsenstrompreis Deutschland</title>
+  <meta name="description" content="LadeRick zeigt den deutschen Börsenstrompreis (EPEX SPOT Day-Ahead) als Chart und berechnet das günstigste 4-Stunden-Fenster der letzten 36 Stunden – ohne Anmeldung.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://www.smard.de https://api.energy-charts.info https://api.awattar.de; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9f9f7">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d0d0d">
+  <meta property="og:title" content="LadeRick – Börsenstrompreis Deutschland">
+  <meta property="og:description" content="Aktueller Börsenstrompreis (Day-Ahead) als Chart und das günstigste 4-Stunden-Fenster der letzten 36 Stunden.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/styles.css">
+  <script src="src/theme-init.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Zum Inhalt springen</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+          <path d="M18.5 2 6 18h8l-1.5 12L26 13h-8z" />
+        </svg>
+        <div>
+          <h1 class="brand-name">LadeRick</h1>
+          <p class="tagline">Der Börsenstrompreis für Deutschland – aktuell, transparent, ohne Anmeldung.</p>
+        </div>
+      </div>
+      <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false">Dunkles Design</button>
+    </div>
+  </header>
+
+  <main id="main" class="wrap">
+    <div id="override-banner" class="banner" hidden>
+      <span id="override-text"></span>
+      <a id="override-link" href="./">Zur Live-Ansicht</a>
+    </div>
+
+    <p id="status-msg" class="status-msg" role="status" aria-live="polite">Preisdaten werden geladen …</p>
+
+    <section class="hero-grid" aria-label="Günstigste Zeitfenster">
+      <article id="hero" class="card card-hero" aria-labelledby="hero-title" data-state="loading">
+        <p class="pill pill-past">Vergangen · letzte 36 Stunden</p>
+        <h2 id="hero-title" class="card-title">Günstigstes 4-Stunden-Fenster</h2>
+        <p class="hero-overline" data-field="day">&nbsp;</p>
+        <p class="hero-time" data-field="time">&nbsp;</p>
+        <p class="hero-price">
+          <span class="hero-price-label"><span aria-hidden="true">Ø</span><span class="sr-only">Durchschnitt</span> ca.</span>
+          <strong class="hero-ct" data-field="ct">&nbsp;</strong>
+          <span class="hero-mwh muted" data-field="mwh"></span>
+        </p>
+        <p class="hero-compare" data-field="compare"></p>
+        <p class="hero-flags" data-field="flags"></p>
+        <p class="hero-meta muted" data-field="ended"></p>
+        <p class="hero-meta muted" data-field="range"></p>
+        <p class="hero-empty" data-field="empty" hidden></p>
+        <p class="footnote muted">Reiner Börsenpreis ohne Netzentgelte, Steuern, Umlagen und MwSt. – der Haushaltspreis liegt deutlich höher.</p>
+      </article>
+
+      <article id="outlook" class="card card-outlook" aria-labelledby="outlook-title" data-state="loading">
+        <p class="pill pill-future" data-field="pill">Kommend</p>
+        <h2 id="outlook-title" class="card-title">Günstigstes 4-Stunden-Fenster</h2>
+        <p class="hero-overline" data-field="day">&nbsp;</p>
+        <p class="hero-time hero-time-small" data-field="time">&nbsp;</p>
+        <p class="hero-price hero-price-small">
+          <span class="hero-price-label"><span aria-hidden="true">Ø</span><span class="sr-only">Durchschnitt</span> ca.</span>
+          <strong class="hero-ct" data-field="ct">&nbsp;</strong>
+          <span class="hero-mwh muted" data-field="mwh"></span>
+        </p>
+        <p class="hero-flags" data-field="flags"></p>
+        <p class="hero-meta muted" data-field="starts"></p>
+        <p class="hero-empty" data-field="empty" hidden></p>
+        <p class="footnote muted">Feste, bereits veröffentlichte Börsenpreise – keine Prognose. Kann das laufende Zeitfenster einschließen.</p>
+      </article>
+    </section>
+
+    <section class="kpis" aria-label="Kennzahlen">
+      <div class="tile tile-current" id="kpi-current" data-state="loading">
+        <p class="tile-label" data-field="label">Jetzt</p>
+        <p class="tile-value" data-field="value">&nbsp;</p>
+        <p class="tile-sub muted" data-field="sub"></p>
+      </div>
+      <div class="tile" id="kpi-min" data-state="loading">
+        <p class="tile-label" data-field="label">Minimum (36 h)</p>
+        <p class="tile-value" data-field="value">&nbsp;</p>
+        <p class="tile-sub muted" data-field="sub"></p>
+      </div>
+      <div class="tile" id="kpi-max" data-state="loading">
+        <p class="tile-label" data-field="label">Maximum (36 h)</p>
+        <p class="tile-value" data-field="value">&nbsp;</p>
+        <p class="tile-sub muted" data-field="sub"></p>
+      </div>
+    </section>
+
+    <section class="card card-chart" aria-labelledby="chart-title" id="chart-card" data-state="loading">
+      <div class="chart-head">
+        <div>
+          <h2 id="chart-title" class="card-title">Preisverlauf</h2>
+          <p id="chart-subtitle" class="muted">&nbsp;</p>
+        </div>
+        <a href="#table" id="table-link" class="link">Als Tabelle anzeigen</a>
+      </div>
+      <p id="chart-readout" class="chart-readout" aria-hidden="true">&nbsp;</p>
+      <div id="chart" class="chart" tabindex="0" role="group" aria-label="Preisverlauf, mit Pfeiltasten navigierbar"></div>
+      <output id="chart-output" class="sr-only" aria-live="polite"></output>
+      <ul class="legend" id="chart-legend" aria-label="Legende">
+        <li><span class="swatch swatch-line" aria-hidden="true"></span>Vergangene Preise</li>
+        <li><span class="swatch swatch-future" aria-hidden="true"></span>Kommende Preise (bereits bekannt)</li>
+        <li><span class="swatch swatch-cheapest" aria-hidden="true"></span>Günstigstes 4-h-Fenster</li>
+        <li><span class="swatch swatch-outlook" aria-hidden="true"></span>Ausblick (kommend)</li>
+      </ul>
+      <details id="table" class="table-details">
+        <summary id="table-summary">Alle Werte als Tabelle</summary>
+        <div class="table-wrap">
+          <table id="price-table">
+            <caption id="table-caption">Alle Börsenpreise</caption>
+            <thead>
+              <tr>
+                <th scope="col">Zeitfenster</th>
+                <th scope="col" class="num">ct/kWh</th>
+                <th scope="col" class="num">€/MWh</th>
+                <th scope="col">Markierung</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <p id="status-meta" class="status-meta muted"></p>
+
+    <div id="error-card" class="card card-error" role="alert" hidden>
+      <h2 class="card-title">Preisdaten konnten nicht geladen werden</h2>
+      <p id="error-text">Keine der Quellen (SMARD.de, Energy-Charts, aWATTar) war erreichbar. Bitte später erneut versuchen.</p>
+      <button id="retry" type="button" class="button">Erneut versuchen</button>
+    </div>
+
+    <section class="card card-info" id="info" aria-labelledby="info-title">
+      <h2 id="info-title" class="card-title">Was zeigt LadeRick?</h2>
+
+      <h3>Der Börsenstrompreis</h3>
+      <p>LadeRick zeigt den Preis der täglichen Day-Ahead-Auktion der Strombörse EPEX SPOT für die Gebotszone
+        Deutschland/Luxemburg (DE-LU). Das ist der Großhandelspreis, auf den sich dynamische Stromtarife beziehen.
+        Seit dem 1.&nbsp;Oktober&nbsp;2025 wird dieser Preis in 15-Minuten-Abschnitten gehandelt; davor galt ein Preis je Stunde.
+        Die Preise für den Folgetag werden werktäglich wie am Wochenende gegen 12:45–13:15&nbsp;Uhr veröffentlicht und
+        ändern sich danach nicht mehr. Alle Uhrzeiten auf dieser Seite sind deutsche Zeit (MEZ/MESZ).</p>
+
+      <h3>Was heißt das für meinen Tarif?</h3>
+      <p>Bei einem dynamischen Stromtarif setzt sich der Preis aus dem hier gezeigten Börsenpreis plus festen Bestandteilen
+        zusammen (Netzentgelt, Stromsteuer, Umlagen, Konzessionsabgabe, Anbieteraufschlag, 19&nbsp;% MwSt.). Nur der Börsenanteil
+        schwankt – das günstigste Fenster ist deshalb auch im Tarif das günstigste. Bei einem Festpreistarif ändert sich der
+        Preis nicht. Die konkreten Aufschläge unterscheiden sich je nach Netzgebiet und Anbieter; LadeRick zeigt sie nicht.</p>
+
+      <h3>So wird das günstigste Fenster berechnet</h3>
+      <p>Über die vergangenen 36 Stunden – bis zum Ende der letzten vollständig abgeschlossenen Viertelstunde – wird ein
+        gleitendes 4-Stunden-Fenster gelegt (Schrittweite = Datenauflösung, in der Regel 15 Minuten). Für jedes Fenster wird der
+        zeitgewichtete Mittelwert gebildet; das Fenster mit dem niedrigsten Mittel wird angezeigt. Bei gleichem Mittel gewinnt
+        das frühere Fenster. Fehlen einzelne Werte, werden nur lückenlose Fenster berücksichtigt; gibt es keines, wird das beste
+        Fenster mit mindestens 75&nbsp;% Datenabdeckung als Näherung gekennzeichnet. Der angegebene Durchschnittspreis ist auf eine
+        Nachkommastelle gerundet und deshalb ein „ungefährer“ Wert. Der Ausblick nutzt dieselbe Rechnung für die bereits
+        veröffentlichten Preise ab dem laufenden Zeitabschnitt.</p>
+
+      <h3>Negative Preise</h3>
+      <p>An sonnigen oder windigen Tagen kann der Börsenpreis unter null fallen: Es gibt mehr Strom, als gebraucht wird, und
+        Erzeuger zahlen für die Abnahme. In dynamischen Tarifen wird der Börsenanteil dann gutgeschrieben; die festen
+        Bestandteile bleiben.</p>
+
+      <h3 id="quellen">Datenquellen</h3>
+      <p>LadeRick greift ausschließlich auf öffentliche, regelmäßig aktualisierte Quellen zu. Die erste erreichbare Quelle mit
+        ausreichend Daten wird verwendet; welche das ist, steht in der Statuszeile unter dem Diagramm.</p>
+      <ol class="source-list">
+        <li><strong><a href="https://www.smard.de/" rel="noopener">SMARD.de</a></strong> – Strommarktdaten der Bundesnetzagentur.
+          Großhandelspreise Deutschland/Luxemburg, Lizenz
+          <a href="https://creativecommons.org/licenses/by/4.0/deed.de" rel="noopener">CC&nbsp;BY&nbsp;4.0</a>.
+          Quellenangabe: „Bundesnetzagentur | SMARD.de“.</li>
+        <li><strong><a href="https://www.energy-charts.info/" rel="noopener">Energy-Charts</a></strong> – Datenplattform des
+          Fraunhofer-Instituts für Solare Energiesysteme ISE. Die DE-LU-Preise werden dort unverändert von SMARD.de übernommen
+          (Lizenz CC&nbsp;BY&nbsp;4.0, Quellenangabe „Bundesnetzagentur | SMARD.de via energy-charts.info (Fraunhofer ISE)“).</li>
+        <li><strong><a href="https://www.awattar.de/" rel="noopener">aWATTar</a></strong> – öffentliche Marktdaten-Schnittstelle des
+          Stromanbieters aWATTar GmbH mit den EPEX-SPOT-Day-Ahead-Preisen für Deutschland (reiner Börsenpreis ohne Aufschlag).</li>
+        <li><strong>Zwischenspeicher</strong> – falls keine Quelle direkt erreichbar ist, wird eine serverseitig erstellte Kopie der
+          letzten Daten angezeigt und als solche gekennzeichnet.</li>
+      </ol>
+
+      <h3 id="datenschutz">Datenschutz</h3>
+      <p>LadeRick benötigt keine Anmeldung, setzt keine Cookies und verwendet kein Tracking. Die Preisdaten ruft der Browser
+        direkt bei den genannten Quellen ab; dabei sieht der jeweilige Anbieter (Bundesnetzagentur, Fraunhofer ISE, aWATTar) die
+        IP-Adresse des Browsers. Wird die Seite über GitHub Pages (GitHub, Inc.) ausgeliefert, wird die IP-Adresse auch an GitHub
+        übertragen. Im Browser werden lokal (localStorage, nicht übertragen) nur die gewählte Darstellung (hell/dunkel) und die
+        zuletzt geladenen Preisdaten für einige Minuten gespeichert.</p>
+
+      <h3 id="impressum">Impressum</h3>
+      <p class="todo">Hier die Angaben gemäß §&nbsp;5 DDG des Seitenbetreibers eintragen (Name, Anschrift, Kontakt). Bis dahin ist
+        dieser Abschnitt ein Platzhalter.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>Daten: <a href="https://www.smard.de/" rel="noopener">Bundesnetzagentur | SMARD.de</a> ·
+        <a href="https://www.energy-charts.info/" rel="noopener">Energy-Charts (Fraunhofer ISE)</a> ·
+        <a href="https://www.awattar.de/" rel="noopener">aWATTar</a></p>
+      <p><a href="#datenschutz">Datenschutz</a> · <a href="#impressum">Impressum</a> ·
+        <a href="https://github.com/janrickmer/Lade-rick" rel="noopener">Quellcode auf GitHub</a></p>
+    </div>
+  </footer>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

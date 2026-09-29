@@ -154,7 +154,16 @@ export function formatAgo(ts, now) {
 export function formatIn(ts, now) {
   const diffMin = Math.max(0, Math.round((ts - now) / 60_000));
   if (diffMin < 1) return 'in weniger als einer Minute';
-  return `in ${diffMin} ${diffMin === 1 ? 'Minute' : 'Minuten'}`;
+  if (diffMin < 60) return `in ${diffMin} ${diffMin === 1 ? 'Minute' : 'Minuten'}`;
+  if (diffMin < 6 * 60) {
+    const h = Math.floor(diffMin / 60);
+    const m = diffMin % 60;
+    const hours = `${h} ${h === 1 ? 'Stunde' : 'Stunden'}`;
+    return m ? `in ${hours} und ${m} ${m === 1 ? 'Minute' : 'Minuten'}` : `in ${hours}`;
+  }
+  const h = Math.round(diffMin / 60);
+  if (h < 48) return `in etwa ${h} Stunden`;
+  return `in etwa ${Math.round(h / 24)} Tagen`;
 }
 
 /** Stunden als „36 h“ / „4 h“ */

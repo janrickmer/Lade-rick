@@ -102,4 +102,8 @@ test('formatAgo / formatIn', () => {
   assert.equal(formatAgo(NOW - 3 * 86_400_000, NOW), 'vor 3 Tagen');
   assert.equal(formatIn(NOW + 600_000, NOW), 'in 10 Minuten');
   assert.equal(formatIn(NOW + 10_000, NOW), 'in weniger als einer Minute');
+  assert.equal(formatIn(NOW + 75 * 60_000, NOW), 'in 1\u00a0Stunde und 15\u00a0Minuten');
+  assert.equal(formatIn(NOW + 3 * 3_600_000, NOW), 'in 3\u00a0Stunden');
+  assert.equal(formatIn(NOW + 1260 * 60_000, NOW), 'in etwa 21\u00a0Stunden');
+  assert.equal(formatIn(NOW + 3 * 86_400_000, NOW), 'in etwa 3\u00a0Tagen');
 });

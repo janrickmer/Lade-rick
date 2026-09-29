@@ -1,0 +1,108 @@
+# LadeRick
+
+**LadeRick** zeigt den deutschen Börsenstrompreis (EPEX SPOT Day-Ahead, Gebotszone DE-LU) als Chart,
+berechnet aus den Preisen der vergangenen 36 Stunden das im Durchschnitt günstigste 4-Stunden-Fenster und
+gibt dessen ungefähren Durchschnittspreis an. Keine Anmeldung, keine Cookies, kein Tracking, kein Backend.
+
+## Funktionen
+
+- **Günstigstes 4-Stunden-Fenster der letzten 36 Stunden** mit Uhrzeiten, Ø-Preis in ct/kWh (und €/MWh) und
+  Vergleich zum 36-h-Durchschnitt.
+- **Ausblick**: günstigstes 4-h-Fenster in den bereits veröffentlichten Preisen ab jetzt (Day-Ahead-Preise für
+  den Folgetag erscheinen täglich gegen 13 Uhr) – klar als „kommend“ gekennzeichnet, keine Prognose.
+- **Preisverlauf** als SVG-Chart (15-Minuten-Werte, Nulllinie für negative Preise, „Jetzt“-Linie, markiertes
+  Fenster, Tooltip/Ablesezeile, Tastaturnavigation) plus Tabellenansicht.
+- **Kennzahlen**: aktueller Börsenpreis, Minimum und Maximum der letzten 36 Stunden.
+- **Seriöse Quellen mit Fallback-Kette**: Bundesnetzagentur | SMARD.de → Energy-Charts (Fraunhofer ISE) →
+  aWATTar → serverseitiger Zwischenspeicher. Die genutzte Quelle steht mit Lizenz in der Statuszeile.
+- Deutschsprachig, Zeiten in Europe/Berlin (inkl. Zeitumstellung), helles/dunkles Design, barrierearm.
+
+## Datenquellen
+
+| Quelle | Betreiber | Endpunkt | Lizenz |
+|---|---|---|---|
+| [SMARD.de](https://www.smard.de/) | Bundesnetzagentur | `https://www.smard.de/app/chart_data/4169/DE/…` (Filter 4169 = Großhandelspreise DE-LU, Viertelstunden, Fallback Stunden) | CC BY 4.0 |
+| [Energy-Charts](https://www.energy-charts.info/) | Fraunhofer ISE | `https://api.energy-charts.info/price?bzn=DE-LU&start=…&end=…` (DE-LU-Preise unverändert von SMARD.de übernommen) | CC BY 4.0, Quellenangabe |
+| [aWATTar](https://www.awattar.de/) | aWATTar GmbH | `https://api.awattar.de/v1/marketdata?start=…&end=…` (reiner EPEX-SPOT-Preis) | API-Bedingungen aWATTar |
+| Zwischenspeicher | GitHub Action dieses Repos | `data/prices.json` (stündlich erzeugt, nur Fallback) | wie Originalquelle |
+
+Alle Preise werden in EUR/MWh verarbeitet und als ct/kWh angezeigt (÷ 10). Es handelt sich um reine
+Börsenpreise ohne Netzentgelte, Steuern, Umlagen und MwSt.
+
+**Hinweise aus der Recherche:** Energy-Charts begrenzt Anfragen pro IP (ca. 2/min, HTTP 429 mit
+`Retry-After`); LadeRick fragt deshalb pro Seitenaufruf höchstens einmal ab, hält die Daten 10 Minuten im
+`localStorage` und lädt automatisch nur alle 30 Minuten neu. Ob die Quellen `Access-Control-Allow-Origin: *`
+senden, konnte aus der Entwicklungsumgebung nicht live geprüft werden – die Fallback-Kette und der
+Zwischenspeicher fangen CORS-Blockaden ab (siehe Abschnitt *Betrieb*).
+
+## Berechnung
+
+1. Analysezeitraum: die vergangenen 36 Stunden bis zum Ende der letzten vollständig abgeschlossenen
+   Viertelstunde (bzw. Stunde bei Stundendaten).
+2. Gleitendes 4-Stunden-Fenster mit Schrittweite = Datenauflösung; Mittelwert zeitgewichtet, Punkte an den
+   Fenstergrenzen zählen anteilig.
+3. Nur lückenlose Fenster zählen; gibt es keines, wird das beste Fenster mit ≥ 75 % Abdeckung als Näherung
+   gekennzeichnet. Gleichstand → früheres Fenster.
+4. Der Ausblick verwendet dieselbe Rechnung ab dem laufenden Zeitabschnitt, ohne Näherungs-Fallback.
+
+Die Logik liegt in `src/analysis.js` und ist vollständig durch Unit-Tests abgedeckt (u. a. Zeitumstellung,
+Datenlücken, gemischte Auflösung 15/60 min, negative Preise, Duplikate aus SMARD-Wochendateien).
+
+## Projektstruktur
+
+```
+index.html              Seite (statisch, ohne Build)
+assets/styles.css       Design (Farbtoken hell/dunkel)
+src/app.js              Laden → Analyse → Rendering, Auto-Aktualisierung, Theme
+src/sources.js          Quellen-Adapter + Fallback-Kette (Browser und Node)
+src/analysis.js         reine Berechnungsfunktionen
+src/chart.js            SVG-Chart ohne Abhängigkeiten
+src/ui.js               DOM-Rendering (Karten, Tabelle, Status)
+src/format.js           de-DE-Formatierung, Europe/Berlin
+src/config.js           Konfiguration (Lookback, Slot, Quellenreihenfolge, Intervalle)
+scripts/serve.js        Dev-Server ohne Abhängigkeiten
+scripts/fetch-snapshot.js  erzeugt data/prices.json (GitHub Action)
+tests/unit              node:test
+tests/e2e               Playwright (Chromium) gegen gemockte APIs
+tests/fixtures          deterministischer Generator für alle API-Formate
+```
+
+## Entwicklung
+
+Voraussetzung: Node.js ≥ 20.
+
+```bash
+npm install                 # nur Playwright (Dev-Dependency)
+npm start                   # http://localhost:8080
+npm test                    # Unit-Tests
+npx playwright install chromium
+npm run test:e2e            # End-to-End-Tests, Screenshots in tests/e2e/__screenshots__/
+npm run snapshot            # data/prices.json aus den Live-Quellen erzeugen
+```
+
+Die Seite braucht keinen Build-Schritt; ES-Module benötigen aber einen HTTP-Server (kein `file://`).
+
+### Test-Parameter (nur zum Prüfen)
+
+- `?now=2026-09-28T12:00:00Z` fixiert „jetzt“ (Analyse und Anzeige). Ein gelbes Banner weist darauf hin.
+- `?source=smard|energy-charts|awattar|snapshot` erzwingt eine Quelle.
+
+## Betrieb
+
+**GitHub Pages:** In den Repository-Einstellungen unter *Pages* als Quelle „GitHub Actions“ wählen. Der
+Workflow `.github/workflows/pages.yml` veröffentlicht die Seite bei jedem Push auf `main` und zusätzlich
+stündlich; dabei erzeugt er serverseitig `data/prices.json` als Fallback, falls der Browser die Quellen nicht
+direkt erreichen kann (z. B. fehlende CORS-Freigabe oder Ausfall). Ohne diesen Snapshot funktioniert die Seite
+ebenfalls, solange mindestens eine Quelle direkt erreichbar ist.
+
+**Anderer statischer Host:** Die Dateien `index.html`, `assets/`, `src/` (und optional `data/prices.json`)
+genügen. Die Content-Security-Policy in `index.html` erlaubt Verbindungen nur zu den drei Quellen.
+
+**Vor dem Livegang zu erledigen:**
+
+- Impressum im Abschnitt „Impressum“ von `index.html` eintragen (§ 5 DDG); Datenschutzhinweis prüfen.
+- Einmal im Browser prüfen, welche Quelle tatsächlich live antwortet (Statuszeile unter dem Diagramm).
+
+## Lizenz
+
+MIT (siehe `LICENSE`). Die Preisdaten unterliegen den Lizenzen der jeweiligen Quellen.
