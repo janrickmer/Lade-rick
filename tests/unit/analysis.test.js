@@ -221,9 +221,11 @@ test('T8: negative Preise und Gleichstand im Stundenraster', () => {
 
 test('T9: cheapestUpcomingSlot – genau 4 h, zu wenig, Lücke', () => {
   const a = grid({ from: m(12), count: 16, price: () => 7 });
-  assert.deepEqual((({ start, end, meanPrice }) => ({ start, end, meanPrice }))(cheapestUpcomingSlot(a, { now: m(12), slotHours: 4 })), { start: m(12), end: m(16), meanPrice: 7 });
-  assert.equal(cheapestUpcomingSlot(a.slice(0, 15), { now: m(12), slotHours: 4 }), null);
-  assert.equal(cheapestUpcomingSlot(a.filter((p) => p.start !== m(13)), { now: m(12), slotHours: 4 }), null);
+  assert.deepEqual((({ start, end, meanPrice }) => ({ start, end, meanPrice }))(cheapestUpcomingSlot(a, { now: m(12) - 1, slotHours: 4 })), { start: m(12), end: m(16), meanPrice: 7 });
+  // genau um 12:00 hat das Fenster 12:00–16:00 bereits begonnen → keines mehr möglich
+  assert.equal(cheapestUpcomingSlot(a, { now: m(12), slotHours: 4 }), null);
+  assert.equal(cheapestUpcomingSlot(a.slice(0, 15), { now: m(12) - 1, slotHours: 4 }), null);
+  assert.equal(cheapestUpcomingSlot(a.filter((p) => p.start !== m(13)), { now: m(12) - 1, slotHours: 4 }), null);
   assert.equal(cheapestUpcomingSlot([], { now: m(12) }), null);
 });
 
@@ -335,8 +337,10 @@ test('cheapestUpcomingSlot: nur Fenster, die noch nicht begonnen haben', () => {
   const u2 = cheapestUpcomingSlot(pts2, { now });
   assert.equal(u2.start, m(14, 15));
   approx(u2.meanPrice, (15 * 3 + 90) / 16);
-  // „jetzt“ genau auf der Grenze: ein Fenster ab jetzt ist zulässig
-  assert.equal(cheapestUpcomingSlot(pts2, { now: m(14) }).start, m(14));
+  // „jetzt“ genau auf der Grenze: ein Fenster, das jetzt beginnt, gilt als begonnen → nächste Viertelstunde
+  assert.equal(cheapestUpcomingSlot(pts2, { now: m(14) }).start, m(14, 15));
+  // 1 ms vor der Grenze: das Fenster ab 14:00 hat noch nicht begonnen
+  assert.equal(cheapestUpcomingSlot(pts2, { now: m(14) - 1 }).start, m(14));
   // Stundenraster: frühester Start ist die nächste volle Stunde
   const hourly = grid({ count: 48, resMin: 60, price: (i) => (i >= 14 && i < 18 ? 3 : 90) });
   assert.equal(cheapestUpcomingSlot(hourly, { now: m(14, 7) }).start, m(15));
@@ -345,10 +349,13 @@ test('cheapestUpcomingSlot: nur Fenster, die noch nicht begonnen haben', () => {
 test('cheapestUpcomingSlot: Start liegt nie vor „jetzt“ (Stichprobe über 40 Stunden)', () => {
   const pts = grid({ count: 72 * 4, price: (i) => 50 + 40 * Math.sin(i / 7) + (i % 5) });
   let checked = 0;
-  for (let t = m(0, 1); t < m(40); t += 7 * MINUTE + 13_000) {
+  const nows = [];
+  for (let t = m(0, 1); t < m(40); t += 7 * MINUTE + 13_000) nows.push(t);
+  for (let q = 0; q < 160; q += 1) nows.push(m(0) + q * 15 * MINUTE, m(0) + q * 15 * MINUTE - 1, m(0) + q * 15 * MINUTE + 1); // Grenzen ±1 ms
+  for (const t of nows) {
     const u = cheapestUpcomingSlot(pts, { now: t });
     if (!u) continue;
-    assert.ok(u.start >= t, `Start ${new Date(u.start).toISOString()} liegt vor jetzt ${new Date(t).toISOString()}`);
+    assert.ok(u.start > t, `Start ${new Date(u.start).toISOString()} liegt nicht nach jetzt ${new Date(t).toISOString()}`);
     assert.equal(u.end - u.start, 4 * HOUR);
     checked += 1;
   }

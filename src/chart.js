@@ -218,8 +218,10 @@ export class PriceChart {
 
     // Grünes Band für das günstigste kommende Fenster
     if (cheapest && cheapest.end > xMin && cheapest.start < xMax) {
-      const bx = x(Math.max(cheapest.start, xMin));
-      const bw = x(Math.min(cheapest.end, xMax)) - bx;
+      // Linke Kante nie vor der (auf Pixel gerundeten) Jetzt-Linie – das Fenster beginnt nach „jetzt“
+      const nowLineX = now >= xMin && now <= xMax ? Math.round(x(now)) + 0.5 : -Infinity;
+      const bx = Math.max(x(Math.max(cheapest.start, xMin)), nowLineX);
+      const bw = Math.max(0, x(Math.min(cheapest.end, xMax)) - bx);
       svgEl('rect', { class: 'band-cheapest', x: bx, y: MARGIN.top, width: bw, height: plotH }, gRegions);
       const label = bw >= 130 ? 'günstigstes 4-h-Fenster' : bw >= 44 ? 'günstig' : null;
       if (label) text(gRegions, bx + 6, MARGIN.top + plotH - 8, label, 'band-label');
@@ -417,6 +419,7 @@ export class PriceChart {
     this.hoverLayer?.setAttribute('visibility', 'hidden');
     this.tooltip.hidden = true;
     if (this.readout) this.readout.textContent = ' ';
+    if (this.output) this.output.textContent = '';
   }
 
   selectNearest(ts) {

@@ -23,7 +23,8 @@ const sourceParam = params.get('source');
 const sourceOverride = sourceParam && KNOWN_SOURCES.includes(sourceParam) ? sourceParam : null;
 const hasOverride = Number.isFinite(nowOverride) || Boolean(sourceOverride);
 
-const getNow = () => (Number.isFinite(nowOverride) ? nowOverride : Date.now());
+/** „Jetzt“ für die Berechnung; notBefore erlaubt dem Grenz-Timer, knapp vor der Grenze bereits für sie zu rechnen. */
+const getNow = (notBefore = 0) => (Number.isFinite(nowOverride) ? nowOverride : Math.max(Date.now(), notBefore));
 
 const state = {
   series: null,
@@ -91,10 +92,10 @@ function writeCache(series, attempts) {
 
 // ---------- Rendering ----------
 
-function render({ fromCache = false } = {}) {
+function render({ fromCache = false, notBefore = 0 } = {}) {
   const { series, attempts } = state;
   if (!series) return;
-  const now = getNow();
+  const now = getNow(notBefore);
   const result = cheapestSlot(series.points, { now, lookbackHours: config.lookbackHours, slotHours: config.slotHours });
   const upcoming = cheapestUpcomingSlot(series.points, { now, slotHours: config.slotHours });
   const startTime = cheapestStartTimeOfDay(series.points, { now, lookbackHours: config.lookbackHours, slotHours: config.slotHours, wallClockKey: berlinWallClockKey, dayKey: (ts) => berlinParts(ts).ymd });
@@ -123,19 +124,41 @@ function render({ fromCache = false } = {}) {
 
   window.__LADERICK__ = { series, result, upcoming, startTime, current, attempts, now, fromCache, viewDays: state.viewDays, viewStart: view.viewStart, viewEnd: view.viewEnd, viewLabel: view.label };
   document.dispatchEvent(new CustomEvent('laderick:rendered', { detail: window.__LADERICK__ }));
-  scheduleBoundaryRender();
+
+  // Grüne Markierung (Diagramm/Tabelle) und Legende nur, wenn das kommende Fenster im gewählten Zeitraum liegt
+  const legend = document.getElementById('legend-cheapest');
+  if (legend) legend.hidden = !(upcoming && upcoming.end > view.viewStart && upcoming.start < view.viewEnd);
+
+  state.renderWall = Date.now();
+  state.renderPerf = performance.now();
+  state.shownUpcomingStart = upcoming ? upcoming.start : null;
+  scheduleBoundaryRender(now);
 }
 
 /**
- * Neu berechnen genau an der nächsten Viertelstundengrenze: Sobald ein angezeigtes kommendes Fenster beginnt,
- * wird sofort das nächste noch nicht begonnene Fenster gesucht (zusätzlich zur minütlichen Aktualisierung).
+ * Neu berechnen kurz vor der nächsten Viertelstundengrenze, und zwar bereits für den Grenzzeitpunkt: So ist ein
+ * Fenster, das an dieser Grenze beginnen würde, schon ersetzt, bevor es beginnt.
+ * @param {number} renderedNow das „jetzt“ der gerade abgeschlossenen Berechnung
  */
-function scheduleBoundaryRender() {
+function scheduleBoundaryRender(renderedNow) {
   window.clearTimeout(state.boundaryTimer);
   if (Number.isFinite(nowOverride)) return;
   const step = 15 * MINUTE;
-  const wait = Math.floor(Date.now() / step) * step + step - Date.now() + 250;
-  state.boundaryTimer = window.setTimeout(() => { if (state.series) render({ fromCache: true }); }, wait);
+  const boundary = Math.floor(renderedNow / step) * step + step;
+  const wait = Math.max(0, boundary - Date.now() - 30);
+  state.boundaryTimer = window.setTimeout(() => { if (state.series) render({ fromCache: true, notBefore: boundary }); }, wait);
+}
+
+/**
+ * Wächter (jede Sekunde, sehr billig): Hat das angezeigte kommende Fenster begonnen oder ist die Uhr gesprungen
+ * (Ruhezustand ohne Tab-Wechsel, Zeitumstellung per NTP), wird sofort neu gerechnet.
+ */
+function watchdog() {
+  if (!state.series || Number.isFinite(nowOverride) || state.renderWall === undefined) return;
+  const wall = Date.now();
+  const expectedWall = state.renderWall + (performance.now() - state.renderPerf);
+  const started = state.shownUpcomingStart !== null && wall >= state.shownUpcomingStart;
+  if (started || Math.abs(wall - expectedWall) > 2000) render({ fromCache: true });
 }
 
 // ---------- Laden ----------
@@ -307,6 +330,8 @@ function init() {
   window.setInterval(() => load(), config.refreshMinutes * MINUTE);
   // … lokale Neuberechnung (Jetzt-Linie, aktueller Preis, Ausblick) jede Minute ohne Netzabruf …
   window.setInterval(() => { if (state.series && !Number.isFinite(nowOverride)) render({ fromCache: true }); }, MINUTE);
+  window.setInterval(watchdog, 1000);
+  window.addEventListener('focus', () => { if (state.series) render({ fromCache: true }); });
   // … und beim Zurückkehren in den Tab: sofort neu rechnen (damit kein inzwischen begonnenes Fenster stehen bleibt),
   // danach neu abrufen, wenn der letzte Abruf schon länger her ist.
   document.addEventListener('visibilitychange', () => {

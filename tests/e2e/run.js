@@ -311,6 +311,7 @@ await scenario('Chart-Interaktion: Hover-Tooltip, Tastaturnavigation, Screenread
   assert.match(await text(page, '#chart-output'), /^Di\., 29\.09\., 23:45 – 24:00 Uhr.*kommend/);
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('.chart-tooltip').isHidden(), true);
+  assert.equal(await text(page, '#chart-output'), '', 'Ablesezeile wird geleert');
 });
 
 await scenario('Mobil (360 px): kein horizontales Scrollen, Achsenlabels ohne Überlappung, Ablesezeile statt Tooltip', async (page) => {
@@ -490,20 +491,45 @@ await scenario('Bereits begonnenes günstiges Fenster wird nicht gezeigt – fr�
   assert.ok(cheapRowStarts.length > 0 && cheapRowStarts.every((t) => t >= now), 'keine begonnene Zeile grün markiert');
 });
 
-await scenario('An der Viertelstundengrenze wird ein gerade beginnendes Fenster sofort ersetzt', async (page) => {
-  const start = Date.parse('2026-09-28T18:14:50Z'); // 20:14:50 MESZ
-  const cheapStart = Date.parse('2026-09-28T18:15:00Z'); // 20:15 MESZ
-  const fixtures = buildFixtureSet({ now: start, price: (ts) => (ts >= cheapStart && ts < cheapStart + 4 * HOUR ? 1 : Math.max(syntheticPrice(ts), 5)) });
-  await page.clock.install({ time: start });
+await scenario('Viertelstundengrenze: ein beginnendes Fenster wird schon kurz vor seinem Start ersetzt', async (page) => {
+  const boundary = Date.parse('2026-09-28T18:15:00Z'); // 20:15 MESZ – hier beginnt der sehr günstige Block
+  const fixtures = buildFixtureSet({ now: boundary - 20_000, price: (ts) => (ts >= boundary && ts < boundary + 4 * HOUR ? 1 : Math.max(syntheticPrice(ts), 5)) });
+  await page.clock.install({ time: boundary - 20_000 });
   await mockSources(page, { fixtures });
   await page.goto(`${srv.baseUrl}/`); // Live-Uhr (gesteuert), kein ?now=
   await page.waitForFunction(() => Boolean(window.__LADERICK__?.upcoming), null, { polling: 100 });
+  const read = () => page.evaluate(() => ({ start: window.__LADERICK__.upcoming.start, wall: Date.now() }));
+  await page.clock.pauseAt(boundary - 100);
+  const before = await read();
+  assert.equal(before.start, boundary, '100 ms vor Beginn ist das Fenster noch kommend');
+  assert.ok(before.start > before.wall);
+  await page.clock.runFor(80); // 20 ms vor der Grenze
+  const after = await read();
+  assert.ok(after.wall < boundary, 'Uhr steht noch vor der Grenze');
+  assert.equal(after.start, boundary + 15 * MINUTE, 'bereits vor Beginn durch das nächste Fenster ersetzt');
+  await page.clock.runFor(60 * MINUTE); // eine Stunde weiter: Minuten-, Grenz- und Watchdog-Timer laufen
+  const later = await page.evaluate(() => ({ start: window.__LADERICK__.upcoming?.start ?? null, now: window.__LADERICK__.now, wall: Date.now() }));
+  assert.ok(later.start === null || later.start > later.wall, `angezeigtes Fenster (${later.start}) hat schon begonnen (${later.wall})`);
+});
+
+await scenario('Sprung der Systemuhr (z. B. nach Standby): Anzeige wird innerhalb von 2 Sekunden neu berechnet', async (page) => {
+  const start = Date.parse('2026-09-28T16:00:00Z'); // 18:00 MESZ
+  const cheapStart = Date.parse('2026-09-28T18:00:00Z'); // 20:00 MESZ
+  const fixtures = buildFixtureSet({ now: start, price: (ts) => (ts >= cheapStart && ts < cheapStart + 4 * HOUR ? 1 : Math.max(syntheticPrice(ts), 5)) });
+  await page.clock.install({ time: start });
+  await mockSources(page, { fixtures });
+  await page.goto(`${srv.baseUrl}/`);
+  await page.waitForFunction(() => Boolean(window.__LADERICK__?.upcoming), null, { polling: 100 });
   assert.equal(await page.evaluate(() => window.__LADERICK__.upcoming.start), cheapStart);
-  await page.clock.fastForward(20_000); // über 20:15:00 hinaus
-  const after = await page.evaluate(() => ({ start: window.__LADERICK__.upcoming.start, now: window.__LADERICK__.now }));
-  assert.ok(after.now >= cheapStart, 'neu berechnet nach der Grenze');
-  assert.equal(after.start, cheapStart + 15 * MINUTE, 'nächstes noch nicht begonnenes Fenster');
-  assert.ok(after.start >= after.now);
+  const jumped = cheapStart + 7 * MINUTE; // Gerät wacht um 20:07 auf, der Block läuft bereits
+  await page.clock.setSystemTime(jumped);
+  await page.clock.runFor(1500);
+  const r = await page.evaluate(() => ({ start: window.__LADERICK__.upcoming?.start ?? null, now: window.__LADERICK__.now }));
+  assert.ok(r.now >= jumped, 'nach dem Sprung neu berechnet');
+  assert.equal(r.start, cheapStart + 15 * MINUTE, 'begonnenes Fenster wird nicht mehr gezeigt');
+  const bandX = Number(await page.locator('#chart svg .band-cheapest').getAttribute('x'));
+  const nowX = Number(await page.locator('#chart svg .now-line').getAttribute('x1'));
+  assert.ok(bandX >= nowX, `grünes Band (x=${bandX}) beginnt vor der Jetzt-Linie (x=${nowX})`);
 });
 
 await scenario('Unbrauchbarer Zwischenspeicher wird verworfen und die Seite lädt normal', async (page) => {
@@ -543,6 +569,7 @@ await scenario('Zeitraum-Umschalter in Kalendertagen: 1/2/3 Tage, Auswahl wird g
   assert.equal(await page.locator('#price-table tbody tr').count(), 96);
   assert.equal(await page.locator('#chart svg .now-line').count(), 1);
   assert.equal(await page.locator('#chart svg .band-cheapest').count(), 0, 'kommendes Fenster liegt morgen, außerhalb der Tagesansicht');
+  assert.equal(await page.locator('#legend-cheapest').isHidden(), true, 'Legende ohne grünes Band ausgeblendet');
   assert.equal(await page.evaluate(() => localStorage.getItem('laderick:days')), '1');
 
   await page.locator('label[for="range-2"]').click();
@@ -553,6 +580,7 @@ await scenario('Zeitraum-Umschalter in Kalendertagen: 1/2/3 Tage, Auswahl wird g
   assert.equal(r2.viewEnd, Date.parse('2026-09-29T22:00:00Z'));
   assert.equal(await page.locator('#price-table tbody tr').count(), 2 * 96);
   assert.equal(await page.locator('#chart svg .band-cheapest').count(), 1);
+  assert.equal(await page.locator('#legend-cheapest').isVisible(), true);
 
   await page.reload();
   const again = await waitForRender(page);
