@@ -3,8 +3,11 @@
 
 import { config } from './config.js';
 import { fetchPrices } from './sources.js';
-import { cheapestSlot, cheapestUpcomingSlot, currentPoint, HOUR, MINUTE } from './analysis.js';
-import { computeView } from './format.js';
+import { cheapestSlot, cheapestUpcomingSlot, cheapestStartTimeOfDay, currentPoint, HOUR, MINUTE } from './analysis.js';
+import { computeView, berlinParts } from './format.js';
+
+/** Uhrzeit-Schlüssel „HH:MM“ in Europe/Berlin für die Startzeit-Empfehlung. */
+const berlinWallClockKey = (ts) => { const p = berlinParts(ts); return `${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')}`; };
 import { PriceChart } from './chart.js';
 import * as ui from './ui.js';
 
@@ -94,11 +97,13 @@ function render({ fromCache = false } = {}) {
   const now = getNow();
   const result = cheapestSlot(series.points, { now, lookbackHours: config.lookbackHours, slotHours: config.slotHours });
   const upcoming = cheapestUpcomingSlot(series.points, { now, slotHours: config.slotHours });
+  const startTime = cheapestStartTimeOfDay(series.points, { now, lookbackHours: config.lookbackHours, slotHours: config.slotHours, wallClockKey: berlinWallClockKey });
   const current = currentPoint(series.points, now);
   const knownUntil = series.points.length ? series.points[series.points.length - 1].end : null;
   const view = computeView(now, knownUntil, state.viewDays);
 
   ui.renderHero(result, { now });
+  ui.renderStartTime(startTime, { now });
   ui.renderOutlook(upcoming, { now, knownUntil });
   ui.renderKpis({ current, result, now });
   ui.renderChartMeta({ points: series.points, view, resolutionMinutes: series.resolutionMinutes, now });
@@ -117,7 +122,7 @@ function render({ fromCache = false } = {}) {
   ui.hideError();
   if (!fromCache) ui.setStatusMessage(ui.statusAfterLoad({ series, attempts, now, knownUntil }));
 
-  window.__LADERICK__ = { series, result, upcoming, current, attempts, now, fromCache, viewDays: state.viewDays, viewStart: view.viewStart, viewEnd: view.viewEnd, viewLabel: view.label };
+  window.__LADERICK__ = { series, result, upcoming, startTime, current, attempts, now, fromCache, viewDays: state.viewDays, viewStart: view.viewStart, viewEnd: view.viewEnd, viewLabel: view.label };
   document.dispatchEvent(new CustomEvent('laderick:rendered', { detail: window.__LADERICK__ }));
 }
 

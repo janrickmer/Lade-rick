@@ -8,6 +8,9 @@ gibt dessen ungefähren Durchschnittspreis an. Keine Anmeldung, keine Cookies, k
 
 - **Günstigstes 4-Stunden-Fenster der letzten 72 Stunden** mit Uhrzeiten, Ø-Preis in ct/kWh (und €/MWh) und
   Vergleich zum 72-h-Durchschnitt.
+- **Empfehlung „beste Startzeit“** (orange Karte direkt unter dem Diagramm): die Uhrzeit, zu der ein 4-Stunden-Ladevorgang
+  im Durchschnitt der letzten 72 Stunden am günstigsten begonnen hätte (Mittel über alle Tage je Uhrzeit, mindestens zwei
+  vollständige Fenster), mit Tageswerten und zweitbester Startzeit.
 - **Ausblick**: günstigstes 4-h-Fenster in den bereits veröffentlichten Preisen ab jetzt (Day-Ahead-Preise für
   den Folgetag erscheinen täglich gegen 13 Uhr) – klar als „kommend“ gekennzeichnet, keine Prognose.
 - **Preisverlauf** ganz oben als SVG-Chart mit wählbarem Zeitraum in Kalendertagen (1 Tag = heute, 2 Tage = heute und

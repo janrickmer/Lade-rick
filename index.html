@@ -95,6 +95,24 @@
       </details>
     </section>
 
+    <article id="start-time" class="card card-orange" aria-labelledby="start-time-title" data-state="loading">
+      <h2 id="start-time-title" class="card-title">Empfehlung: beste Startzeit für eine 4-Stunden-Ladung</h2>
+      <p class="start-lead">Gemessen an den Strompreisen der vergangenen <span data-field="hours">72</span> Stunden haben Sie
+        durchschnittlich das günstigste 4-stündige Lade-Zeitfenster, wenn Sie um diese Uhrzeit Ihre Ladung gestartet hätten:</p>
+      <p class="start-time" data-field="time">&nbsp;</p>
+      <p class="start-price">
+        <span class="hero-price-label"><span aria-hidden="true">Ø</span><span class="sr-only">Durchschnitt</span> ca.</span>
+        <strong class="hero-ct" data-field="ct">&nbsp;</strong>
+        <span class="hero-mwh" data-field="mwh"></span>
+        <span class="start-window" data-field="window"></span>
+      </p>
+      <p class="start-days" data-field="days"></p>
+      <p class="start-runner" data-field="runner"></p>
+      <p class="hero-empty" data-field="empty" hidden></p>
+      <p class="footnote">Rückblick, keine Prognose: Ob diese Startzeit auch morgen günstig ist, hängt von Wetter und Nachfrage ab.
+        Reiner Börsenpreis ohne Netzentgelte, Steuern, Umlagen und MwSt.</p>
+    </article>
+
     <section class="hero-grid" aria-label="Günstigste Zeitfenster">
       <article id="hero" class="card card-hero" aria-labelledby="hero-title" data-state="loading">
         <p class="pill pill-past">Vergangen · letzte 72 Stunden</p>
@@ -185,6 +203,12 @@
         Fenster mit mindestens 75&nbsp;% Datenabdeckung als Näherung gekennzeichnet. Der angegebene Durchschnittspreis ist auf eine
         Nachkommastelle gerundet und deshalb ein „ungefährer“ Wert. Der Ausblick nutzt dieselbe Rechnung für die bereits
         veröffentlichten Preise ab dem laufenden Zeitabschnitt.</p>
+      <p>Die orangefarbene Empfehlung „beste Startzeit“ fragt etwas anderes: Welche Uhrzeit war als Ladebeginn im
+        Durchschnitt der letzten 72 Stunden am günstigsten? Dafür werden für jede Uhrzeit im 15-Minuten-Raster die
+        4-Stunden-Fenster mit diesem Startzeitpunkt an allen Tagen des Zeitraums gemittelt (jeder Tag zählt gleich); die
+        Uhrzeit mit dem niedrigsten Durchschnitt wird genannt, die zweitbeste zur Einordnung dazu. Gewertet werden nur
+        Uhrzeiten, für die mindestens zwei vollständige Fenster vorliegen. Das einzelne günstigste Fenster (Karte „Vergangen“)
+        kann davon abweichen, wenn ein Tag einen Ausreißer hatte.</p>
 
       <h3>Negative Preise</h3>
       <p>An sonnigen oder windigen Tagen kann der Börsenpreis unter null fallen: Es gibt mehr Strom, als gebraucht wird, und

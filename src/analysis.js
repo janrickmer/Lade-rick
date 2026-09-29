@@ -234,6 +234,46 @@ export function cheapestUpcomingSlot(points, { now, slotHours = 4, resolutionMin
   };
 }
 
+/** Standard-Schlüssel für die Uhrzeit (UTC, „HH:MM“) – die App übergibt eine Europe/Berlin-Variante. */
+function utcWallClockKey(ts) {
+  const d = new Date(ts);
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+}
+
+/**
+ * Beste Start-Uhrzeit für eine Ladung der Länge `slotHours`, gemittelt über die vergangenen `lookbackHours`:
+ * Für jede Uhrzeit (Wanduhr-Schlüssel, z. B. „02:15“) werden alle vollständigen Fenster mit diesem Start
+ * im Analysezeitraum gesammelt, ihre zeitgewichteten Mittel werden gleichgewichtet über die Tage gemittelt,
+ * und die Uhrzeit mit dem niedrigsten Durchschnitt gewinnt (Gleichstand → frühere Uhrzeit).
+ * Uhrzeiten mit weniger als `minWindows` vollständigen Fenstern (z. B. wegen Lücken oder weil das Fenster in
+ * die Zukunft reichen würde) werden nicht gewertet.
+ *
+ * @param {PricePoint[]} points normalisiert
+ * @param {{ now:number, lookbackHours?:number, slotHours?:number, minWindows?:number, resolutionMinutes?:number,
+ *           wallClockKey?:(ts:number)=>string }} opts
+ * @returns {{ best: object|null, ranked: Array<{ key:string, meanPrice:number, count:number,
+ *             windows:Array<{start:number,end:number,mean:number}> }>, range:{start:number,end:number}, minWindows:number }}
+ */
+export function cheapestStartTimeOfDay(points, { now, lookbackHours = 72, slotHours = 4, minWindows = 2, resolutionMinutes, wallClockKey = utcWallClockKey } = {}) {
+  if (!Number.isFinite(now)) throw new TypeError('cheapestStartTimeOfDay: now fehlt');
+  const res = resolutionMinutes ?? resolutionAt(points, now);
+  const rangeEnd = floorToResolution(now, res);
+  const rangeStart = rangeEnd - lookbackHours * HOUR;
+  const windows = evaluateWindows(points, { rangeStart, rangeEnd, slotMs: slotHours * HOUR })
+    .filter((w) => Math.abs(w.coverage - 1) <= 1e-6);
+  const groups = new Map();
+  for (const w of windows) {
+    const key = wallClockKey(w.start);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push({ start: w.start, end: w.end, mean: w.mean });
+  }
+  const ranked = [...groups.entries()]
+    .map(([key, ws]) => ({ key, count: ws.length, meanPrice: ws.reduce((a, w) => a + w.mean, 0) / ws.length, windows: ws.sort((a, b) => a.start - b.start) }))
+    .filter((g) => g.count >= minWindows)
+    .sort((a, b) => (Math.abs(a.meanPrice - b.meanPrice) <= EPS ? (a.key < b.key ? -1 : a.key > b.key ? 1 : 0) : a.meanPrice - b.meanPrice));
+  return { best: ranked[0] ?? null, ranked, range: { start: rangeStart, end: rangeEnd }, minWindows, slotHours, lookbackHours };
+}
+
 /** Punkt, der „jetzt“ enthält (start ≤ now < end), sonst null. */
 export function currentPoint(points, now) {
   return points.find((p) => p.start <= now && now < p.end) ?? null;

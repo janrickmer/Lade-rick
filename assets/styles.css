@@ -19,6 +19,9 @@
   --warning: #fab219;
   --critical: #d03b3b;
   --link: #1d63b8;
+  --orange: #f08a2e;
+  --orange-ink: #0b0b0b;
+  --orange-ink-2: rgba(11, 11, 11, 0.74);
   --focus: #2a78d6;
   --shimmer: rgba(11, 11, 11, 0.06);
   --radius: 12px;
@@ -215,6 +218,23 @@ main { padding-bottom: 32px; }
 [data-refreshing="true"] .card-hero, [data-refreshing="true"] .card-outlook, [data-refreshing="true"] .kpis, [data-refreshing="true"] .card-chart {
   opacity: 0.6; transition: opacity 0.2s;
 }
+
+/* ---------- Empfehlung (orange) ---------- */
+
+.card-orange { background: var(--orange); border-color: transparent; color: var(--orange-ink); color-scheme: light; }
+.card-orange .card-title, .card-orange .hero-ct, .card-orange .start-days { color: var(--orange-ink); }
+.card-orange .hero-price-label, .card-orange .hero-mwh, .card-orange .start-window, .card-orange .start-runner,
+.card-orange .footnote, .card-orange .hero-empty { color: var(--orange-ink-2); }
+.start-lead { margin-top: 8px; max-width: 70ch; }
+.start-time { font-size: clamp(40px, 11vw, 72px); font-weight: 750; letter-spacing: -0.02em; line-height: 1.05; margin-top: 8px; }
+@supports (font-size: 1cqi) { .card-orange { container-type: inline-size; } .start-time { font-size: clamp(40px, 9cqi, 72px); } }
+.start-price { margin-top: 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; }
+.start-window { font-size: 0.9375rem; }
+.start-days { margin-top: 8px; font-size: 0.9375rem; }
+.start-runner { margin-top: 4px; font-size: 0.9375rem; }
+.start-days:empty, .start-runner:empty { display: none; }
+[data-state="loading"] .start-time { color: transparent; background: rgba(11, 11, 11, 0.12); border-radius: 8px; min-width: 5ch; min-height: 1.05em; }
+[data-refreshing="true"] .card-orange { opacity: 0.6; transition: opacity 0.2s; }
 
 /* ---------- Kennzahlen ---------- */
 

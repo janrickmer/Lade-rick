@@ -6,8 +6,8 @@ import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { startServer, launchBrowser, mockSources, waitForRender, nowParam, REFERENCE_NOW, buildFixtureSet, ROOT } from './helpers.js';
 import { plantedPrice, syntheticPrice } from '../fixtures/generate.js';
-import { cheapestSlot, cheapestUpcomingSlot, normalizePoints, HOUR, MINUTE } from '../../src/analysis.js';
-import { formatWindow, formatCt } from '../../src/format.js';
+import { cheapestSlot, cheapestUpcomingSlot, cheapestStartTimeOfDay, normalizePoints, HOUR, MINUTE } from '../../src/analysis.js';
+import { formatWindow, formatCt, berlinParts } from '../../src/format.js';
 import { config } from '../../src/config.js';
 
 const SHOTS = resolve(ROOT, 'tests/e2e/__screenshots__');
@@ -540,6 +540,44 @@ await scenario('Vor 13 Uhr (Morgenpreise unbekannt): 2 Tage = gestern und heute,
   assert.equal(r2.viewStart, Date.parse('2026-09-26T22:00:00Z'));
   assert.equal(await text(page, '#chart-subtitle'), 'Gestern und heute · So., 27.09., 00:00 – Mo., 28.09., 24:00 Uhr · 15-Minuten-Werte');
   assert.match(await text(page, '#status-msg'), /Die Preise für morgen erscheinen täglich gegen 13 Uhr\./);
+});
+
+await scenario('Orange Empfehlungskarte: beste Startzeit über 72 h, zweite Karte nach dem Diagramm', async (page) => {
+  await mockSources(page, {});
+  await page.goto(url());
+  const r = await waitForRender(page);
+  const key = (ts) => { const p = berlinParts(ts); return `${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')}`; };
+  const exp = cheapestStartTimeOfDay(normalizePoints(base.points), { now: REFERENCE_NOW, lookbackHours: 72, slotHours: 4, wallClockKey: key });
+  assert.ok(exp.best, 'Erwartung berechenbar');
+  assert.equal(r.startTime.key, exp.best.key);
+  assert.equal(r.startTime.count, exp.best.count);
+  assert.ok(exp.best.count >= 2);
+  assert.equal(await text(page, '#start-time [data-field="time"]'), `${exp.best.key} Uhr`);
+  assert.equal(await text(page, '#start-time [data-field="ct"]'), formatCt(exp.best.meanPrice).replace(/\s+/g, ' '));
+  assert.match(await text(page, '#start-time .start-lead'), /^Gemessen an den Strompreisen der vergangenen 72 Stunden haben Sie durchschnittlich das günstigste 4-stündige Lade-Zeitfenster, wenn Sie um diese Uhrzeit Ihre Ladung gestartet hätten:$/);
+  assert.match(await text(page, '#start-time [data-field="days"]'), /^Durchschnitt aus [23] Tagen \(ct\/kWh\): (Fr\., 25\.09\. [\d,−]+ · )?Sa\., 26\.09\. [\d,−]+ · So\., 27\.09\. [\d,−]+\.$/);
+  assert.match(await text(page, '#start-time [data-field="runner"]'), /^Zweitbeste Startzeit: \d\d:\d\d Uhr \(Ø ca\. .* ct\/kWh\)\.$/);
+  // Position: direkt nach dem Diagramm, vor der Hero-Karte; komplett orange
+  const chartBox = await page.locator('#chart-card').boundingBox();
+  const cardBox = await page.locator('#start-time').boundingBox();
+  const heroBox = await page.locator('#hero').boundingBox();
+  assert.ok(chartBox.y < cardBox.y && cardBox.y < heroBox.y, 'Reihenfolge Diagramm → Empfehlung → Hero');
+  assert.equal(await page.locator('#start-time').evaluate((el) => getComputedStyle(el).backgroundColor), 'rgb(240, 138, 46)');
+  assert.equal(await page.locator('#start-time').getAttribute('data-state'), 'ready');
+});
+
+await scenario('Empfehlungskarte ohne ausreichende Daten zeigt einen Hinweis', async (page) => {
+  const fixtures = buildFixtureSet({ now: REFERENCE_NOW });
+  // nur die letzten 26 h behalten: jede Uhrzeit hat höchstens ein vollständiges Fenster
+  const pts = fixtures.points.filter((p) => p.start >= REFERENCE_NOW - 26 * HOUR);
+  const { toEnergyCharts } = await import('../fixtures/generate.js');
+  await mockSources(page, { fixtures: { ...fixtures, energyCharts: toEnergyCharts(pts) }, smard: 'fail' });
+  await page.goto(url());
+  const r = await waitForRender(page);
+  assert.equal(r.sourceId, 'energy-charts');
+  assert.equal(r.startTime, null);
+  assert.equal(await page.locator('#start-time [data-field="empty"]').isVisible(), true);
+  assert.equal(await text(page, '#start-time [data-field="time"]'), '–');
 });
 
 // ---------------------------------------------------------------------------

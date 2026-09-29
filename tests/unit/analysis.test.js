@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   HOUR, MINUTE, normalizePoints, detectResolutionMinutes, floorToResolution, cheapestSlot,
   cheapestUpcomingSlot, currentPoint, aggregateToResolution, weightedStats, evaluateWindows, resolutionAt,
+  cheapestStartTimeOfDay,
 } from '../../src/analysis.js';
 
 const T0 = Date.parse('2026-09-27T00:00:00Z');
@@ -361,4 +362,64 @@ test('evaluateWindows: Kandidaten liegen vollständig im Bereich', () => {
   assert.equal(w.at(-1).start, m(5));
   assert.equal(w.length, 4 * 4 + 1);
   for (const x of w) approx(x.coverage, 1);
+});
+
+// ---------- cheapestStartTimeOfDay ----------
+
+test('cheapestStartTimeOfDay: konstant günstige Uhrzeit schlägt einen einzelnen Ausreißer', () => {
+  // 4 Tage 15-min-Daten ab T0 (UTC-Uhrzeit als Schlüssel). 02:00–06:00 kostet an jedem Tag 20, sonst 100;
+  // am ersten Tag ist zusätzlich 13:00–17:00 mit 1 extrem günstig (Ausreißer).
+  const price = (i, s) => {
+    const h = ((s - T0) / HOUR) % 24;
+    const day = Math.floor((s - T0) / (24 * HOUR));
+    if (day === 0 && h >= 13 && h < 17) return 1;
+    return h >= 2 && h < 6 ? 20 : 100;
+  };
+  const pts = grid({ count: 4 * 96, price });
+  const now = T0 + 84 * HOUR; // Bereich: T0+12h … T0+84h
+  const r = cheapestStartTimeOfDay(pts, { now, lookbackHours: 72, slotHours: 4 });
+  assert.equal(r.best.key, '02:00');
+  assert.equal(r.best.count, 3);
+  approx(r.best.meanPrice, 20);
+  assert.deepEqual(r.best.windows.map((w) => w.start), [T0 + 26 * HOUR, T0 + 50 * HOUR, T0 + 74 * HOUR]);
+  // Das einzelne günstigste Fenster (Hero-Logik) ist dagegen der Ausreißer am ersten Tag
+  const single = cheapestSlot(pts, { now, lookbackHours: 72, slotHours: 4 });
+  assert.equal(single.slot.start, T0 + 13 * HOUR);
+  // 13:00 kommt dreimal vor: einmal mit dem Ausreißer (1), zweimal mit 100 → Mittel 67
+  const at13 = r.ranked.find((g) => g.key === '13:00');
+  assert.equal(at13.count, 3);
+  approx(at13.meanPrice, 201 / 3);
+});
+
+test('cheapestStartTimeOfDay: Uhrzeiten mit weniger als zwei vollständigen Fenstern zählen nicht, Gleichstand → frühere Uhrzeit', () => {
+  // 72 h Daten genau bis „jetzt“; Preis nur von der Uhrzeit abhängig: 22:00–02:00 = 5, sonst 50
+  const price = (i, s) => { const h = ((s - T0) / HOUR) % 24; return h >= 22 || h < 2 ? 5 : 50; };
+  const now = T0 + 72 * HOUR;
+  const pts = grid({ count: 72 * 4, price });
+  const r = cheapestStartTimeOfDay(pts, { now, lookbackHours: 72, slotHours: 4 });
+  // Start 22:00 liefert Fenster 22–02 mit Mittel 5 an Tag 0 und Tag 1 (Tag 2: 22:00 + 4 h > jetzt) → count 2
+  assert.equal(r.best.key, '22:00');
+  assert.equal(r.best.count, 2);
+  approx(r.best.meanPrice, 5);
+  // Uhrzeiten in den letzten 4 h vor „jetzt“ (20:00–23:45) haben höchstens 2 Fenster; 00:00 hat 3
+  assert.equal(r.ranked.find((g) => g.key === '00:00').count, 3);
+  assert.equal(r.ranked.find((g) => g.key === '20:15').count, 2);
+  // Alle Uhrzeiten mit identischem Mittel 50 sind nach Uhrzeit sortiert (Gleichstand → früher)
+  const fifties = r.ranked.filter((g) => Math.abs(g.meanPrice - 50) < 1e-9).map((g) => g.key);
+  assert.deepEqual(fifties.slice(0, 3), ['02:00', '02:15', '02:30']);
+  const strict = cheapestStartTimeOfDay(pts, { now, lookbackHours: 72, slotHours: 4, minWindows: 3 });
+  assert.equal(strict.best.key, '00:00');
+});
+
+test('cheapestStartTimeOfDay: Lücken, Stundenraster, keine Daten', () => {
+  const hourly = grid({ count: 72, resMin: 60, price: (i) => (i % 24 === 3 ? 10 : 60) });
+  const r = cheapestStartTimeOfDay(hourly, { now: T0 + 72 * HOUR, lookbackHours: 72, slotHours: 4 });
+  assert.equal(r.best.key, '00:00'); // Fenster 00–04 enthält die günstige Stunde 03
+  assert.equal(r.ranked.length, 24 - 4 + 1 + 3); // 21 Uhrzeiten mit 3 Fenstern + 20:00–23:00 mit 2
+  const gappy = grid({ count: 72 * 4 }).filter((p) => ((p.start - T0) / HOUR) % 24 !== 5); // 05:00 fehlt an jedem Tag
+  const g = cheapestStartTimeOfDay(gappy, { now: T0 + 72 * HOUR, lookbackHours: 72, slotHours: 4 });
+  assert.ok(g.ranked.every((x) => x.windows.every((w) => !(w.start <= T0 + 5 * HOUR && T0 + 5 * HOUR < w.end))), 'kein Fenster über die Lücke');
+  assert.equal(cheapestStartTimeOfDay([], { now: T0 }).best, null);
+  const custom = cheapestStartTimeOfDay(hourly, { now: T0 + 72 * HOUR, wallClockKey: (ts) => `h${((ts - T0) / HOUR) % 24}` });
+  assert.equal(custom.best.key, 'h0');
 });

@@ -153,6 +153,42 @@ export function renderOutlook(upcoming, { now, knownUntil }) {
   else setField(root, 'starts', `Läuft – noch bis ${formatEndTime(upcoming.end)} Uhr.`);
 }
 
+// ---------- Empfehlung: beste Startzeit ----------
+
+/**
+ * @param {ReturnType<import('./analysis.js').cheapestStartTimeOfDay>} result
+ * @param {{ now:number }} ctx
+ */
+export function renderStartTime(result, { now }) {
+  const root = $('#start-time');
+  root.dataset.state = 'ready';
+  const empty = $('[data-field="empty"]', root);
+  setField(root, 'hours', String(result?.lookbackHours ?? 72));
+  const best = result?.best ?? null;
+  if (!best) {
+    setField(root, 'time', '–');
+    setField(root, 'ct', '–');
+    setField(root, 'mwh', '');
+    setField(root, 'window', '');
+    setField(root, 'days', '');
+    setField(root, 'runner', '');
+    empty.hidden = false;
+    empty.textContent = 'Für keine Uhrzeit liegen genügend vollständige Preisdaten der vergangenen Tage vor.';
+    return;
+  }
+  empty.hidden = true;
+  const first = best.windows[0];
+  setField(root, 'time', `${best.key} Uhr`);
+  setField(root, 'ct', formatCt(best.meanPrice));
+  setField(root, 'mwh', `(≈ ${formatMwh(best.meanPrice)})`);
+  setField(root, 'window', `für das Fenster ${formatTimeRange(first.start, first.end)}`);
+  const perDay = best.windows.map((w) => `${formatDateShort(w.start)} ${formatCt(w.mean, { unit: false })}`).join(' · ');
+  setField(root, 'days', `Durchschnitt aus ${best.count} ${best.count === 1 ? 'Tag' : 'Tagen'} (ct/kWh): ${perDay}.`);
+  const runner = result.ranked[1];
+  setField(root, 'runner', runner ? `Zweitbeste Startzeit: ${runner.key} Uhr (Ø ca. ${formatCt(runner.meanPrice)}).` : '');
+  void now;
+}
+
 // ---------- Kennzahlen ----------
 
 export function renderKpis({ current, result, now }) {
@@ -299,7 +335,7 @@ export function showError(attempts) {
     text.textContent = `Keine der Quellen (${names.join(', ')}) war erreichbar. Bitte später erneut versuchen.`;
   }
   card.hidden = false;
-  for (const id of ['#hero', '#outlook', '#kpi-current', '#kpi-min', '#kpi-max', '#chart-card']) {
+  for (const id of ['#hero', '#start-time', '#outlook', '#kpi-current', '#kpi-min', '#kpi-max', '#chart-card']) {
     const el = $(id);
     if (!el || el.dataset.state !== 'loading') continue;
     el.dataset.state = 'error';
