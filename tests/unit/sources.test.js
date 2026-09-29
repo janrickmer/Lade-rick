@@ -53,7 +53,7 @@ test('Energy-Charts: Antwort wird korrekt in Punkte umgesetzt, URL nutzt Berline
   assert.equal(series.source.id, 'energy-charts');
   assert.match(series.source.licenceInfo, /CC BY 4\.0/);
   assert.equal(series.fetchedAt, NOW);
-  assert.match(log[0], /^https:\/\/api\.energy-charts\.info\/price\?bzn=DE-LU&start=2026-09-25&end=2026-09-30$/);
+  assert.match(log[0], /^https:\/\/api\.energy-charts\.info\/price\?bzn=DE-LU&start=2026-09-24&end=2026-09-30$/);
 });
 
 test('Energy-Charts: Einheit „EUR / MWh“ wird akzeptiert, andere Einheiten nicht', async () => {
@@ -162,7 +162,7 @@ test('aWATTar: Antwort wird umgesetzt, Zeitfenster als Millisekunden in der URL'
   assert.deepEqual(series.points[10], set.points[10]);
   const url = new URL(log[0]);
   assert.equal(url.origin, 'https://api.awattar.de');
-  assert.equal(Number(url.searchParams.get('start')), NOW - 3 * 24 * HOUR);
+  assert.equal(Number(url.searchParams.get('start')), NOW - 4 * 24 * HOUR);
   assert.equal(Number(url.searchParams.get('end')), NOW + 2 * 24 * HOUR);
 });
 

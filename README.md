@@ -1,18 +1,19 @@
 # LadeRick
 
 **LadeRick** zeigt den deutschen Börsenstrompreis (EPEX SPOT Day-Ahead, Gebotszone DE-LU) als Chart,
-berechnet aus den Preisen der vergangenen 36 Stunden das im Durchschnitt günstigste 4-Stunden-Fenster und
+berechnet aus den Preisen der vergangenen 72 Stunden das im Durchschnitt günstigste 4-Stunden-Fenster und
 gibt dessen ungefähren Durchschnittspreis an. Keine Anmeldung, keine Cookies, kein Tracking, kein Backend.
 
 ## Funktionen
 
-- **Günstigstes 4-Stunden-Fenster der letzten 36 Stunden** mit Uhrzeiten, Ø-Preis in ct/kWh (und €/MWh) und
-  Vergleich zum 36-h-Durchschnitt.
+- **Günstigstes 4-Stunden-Fenster der letzten 72 Stunden** mit Uhrzeiten, Ø-Preis in ct/kWh (und €/MWh) und
+  Vergleich zum 72-h-Durchschnitt.
 - **Ausblick**: günstigstes 4-h-Fenster in den bereits veröffentlichten Preisen ab jetzt (Day-Ahead-Preise für
   den Folgetag erscheinen täglich gegen 13 Uhr) – klar als „kommend“ gekennzeichnet, keine Prognose.
-- **Preisverlauf** als SVG-Chart (15-Minuten-Werte, Nulllinie für negative Preise, „Jetzt“-Linie, markiertes
-  Fenster, Tooltip/Ablesezeile, Tastaturnavigation) plus Tabellenansicht.
-- **Kennzahlen**: aktueller Börsenpreis, Minimum und Maximum der letzten 36 Stunden.
+- **Preisverlauf** ganz oben als SVG-Chart mit wählbarem Zeitraum (24 / 48 / 72 Stunden Rückblick, die bekannten
+  kommenden Preise werden immer angehängt), Nulllinie für negative Preise, „Jetzt“-Linie, markiertem Fenster,
+  Tooltip/Ablesezeile, Tastaturnavigation, plus Tabellenansicht.
+- **Kennzahlen**: aktueller Börsenpreis, Minimum und Maximum der letzten 72 Stunden.
 - **Seriöse Quellen mit Fallback-Kette**: Bundesnetzagentur | SMARD.de → Energy-Charts (Fraunhofer ISE) →
   aWATTar → serverseitiger Zwischenspeicher. Die genutzte Quelle steht mit Lizenz in der Statuszeile.
 - Deutschsprachig, Zeiten in Europe/Berlin (inkl. Zeitumstellung), helles/dunkles Design, barrierearm.
@@ -31,13 +32,13 @@ Börsenpreise ohne Netzentgelte, Steuern, Umlagen und MwSt.
 
 **Hinweise aus der Recherche:** Energy-Charts begrenzt Anfragen pro IP (ca. 2/min, HTTP 429 mit
 `Retry-After`); LadeRick fragt deshalb pro Seitenaufruf höchstens einmal ab, hält die Daten 10 Minuten im
-`localStorage` und lädt automatisch nur alle 30 Minuten neu. Ob die Quellen `Access-Control-Allow-Origin: *`
+`localStorage` und lädt automatisch stündlich neu. Ob die Quellen `Access-Control-Allow-Origin: *`
 senden, konnte aus der Entwicklungsumgebung nicht live geprüft werden – die Fallback-Kette und der
 Zwischenspeicher fangen CORS-Blockaden ab (siehe Abschnitt *Betrieb*).
 
 ## Berechnung
 
-1. Analysezeitraum: die vergangenen 36 Stunden bis zum Ende der letzten vollständig abgeschlossenen
+1. Analysezeitraum: die vergangenen 72 Stunden bis zum Ende der letzten vollständig abgeschlossenen
    Viertelstunde (bzw. Stunde bei Stundendaten).
 2. Gleitendes 4-Stunden-Fenster mit Schrittweite = Datenauflösung; Mittelwert zeitgewichtet, Punkte an den
    Fenstergrenzen zählen anteilig.
@@ -108,7 +109,7 @@ genügen. Die Content-Security-Policy in `index.html` erlaubt Verbindungen nur z
 
 **Hinweis zu geplanten Workflows:** GitHub deaktiviert `schedule`-Trigger in öffentlichen Repositories nach
 60 Tagen ohne Commits. Dann bleibt der Snapshot stehen (die Seite meldet ihn nach 6 Stunden als „möglicherweise
-nicht aktuell“ und lehnt ihn nach 36 Stunden ab). Unter *Actions → GitHub Pages → Enable workflow* lässt er sich
+nicht aktuell“ und lehnt ihn ab, sobald weniger als 4 Stunden Daten im Analysezeitraum liegen). Unter *Actions → GitHub Pages → Enable workflow* lässt er sich
 wieder aktivieren. Schlägt der stündliche Abruf fehl, bleibt der zuvor veröffentlichte Snapshot erhalten.
 
 **Vor dem Livegang zu erledigen:**

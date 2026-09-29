@@ -3,12 +3,13 @@
 
 import { config } from './config.js';
 import { fetchPrices } from './sources.js';
-import { cheapestSlot, cheapestUpcomingSlot, currentPoint, MINUTE } from './analysis.js';
+import { cheapestSlot, cheapestUpcomingSlot, currentPoint, floorToResolution, HOUR, MINUTE } from './analysis.js';
 import { PriceChart } from './chart.js';
 import * as ui from './ui.js';
 
 const CACHE_KEY = 'laderick:cache:v1';
 const THEME_KEY = 'laderick:theme';
+const RANGE_KEY = 'laderick:range';
 
 const params = new URLSearchParams(window.location.search);
 const nowParam = params.get('now');
@@ -26,7 +27,29 @@ const state = {
   lastFetchAt: 0,
   loading: false,
   chart: null,
+  viewHours: readRangeChoice(),
 };
+
+/** Gewählter Diagramm-Zeitraum (Stunden Rückblick) aus localStorage, sonst Standard. */
+function readRangeChoice() {
+  try {
+    const v = Number(window.localStorage.getItem(RANGE_KEY));
+    if (config.chartRangeOptions.includes(v)) return v;
+  } catch { /* ignorieren */ }
+  return config.chartRangeDefault;
+}
+
+function setRangeChoice(hours) {
+  if (!config.chartRangeOptions.includes(hours)) return;
+  state.viewHours = hours;
+  try { window.localStorage.setItem(RANGE_KEY, String(hours)); } catch { /* ignorieren */ }
+  if (state.series) render({ fromCache: true });
+}
+
+function syncRangePicker() {
+  const input = document.querySelector(`#range-picker input[value="${state.viewHours}"]`);
+  if (input) input.checked = true;
+}
 
 // ---------- Zwischenspeicher (localStorage, nur Preisdaten, keine Nutzerdaten) ----------
 
@@ -71,12 +94,13 @@ function render({ fromCache = false } = {}) {
   const upcoming = cheapestUpcomingSlot(series.points, { now, slotHours: config.slotHours });
   const current = currentPoint(series.points, now);
   const knownUntil = series.points.length ? series.points[series.points.length - 1].end : null;
+  const viewStart = floorToResolution(now, result.resolutionMinutes) - state.viewHours * HOUR;
 
   ui.renderHero(result, { now });
   ui.renderOutlook(upcoming, { now, knownUntil });
   ui.renderKpis({ current, result, now });
-  ui.renderChartMeta({ points: series.points, range: result.range, resolutionMinutes: series.resolutionMinutes, now });
-  ui.renderTable({ points: series.points, range: result.range, slot: result.slot, upcoming, now });
+  ui.renderChartMeta({ points: series.points, viewStart, viewHours: state.viewHours, resolutionMinutes: series.resolutionMinutes, now });
+  ui.renderTable({ points: series.points, viewStart, slot: result.slot, upcoming, now });
   ui.renderStatusMeta({ series, attempts, now, knownUntil });
   state.chart.update({
     points: series.points,
@@ -84,12 +108,13 @@ function render({ fromCache = false } = {}) {
     slot: result.slot,
     upcoming,
     range: result.range,
+    viewStart,
     resolutionMinutes: series.resolutionMinutes,
   });
   ui.hideError();
   if (!fromCache) ui.setStatusMessage(ui.statusAfterLoad({ series, attempts, now, knownUntil }));
 
-  window.__LADERICK__ = { series, result, upcoming, current, attempts, now, fromCache };
+  window.__LADERICK__ = { series, result, upcoming, current, attempts, now, fromCache, viewHours: state.viewHours, viewStart };
   document.dispatchEvent(new CustomEvent('laderick:rendered', { detail: window.__LADERICK__ }));
 }
 
@@ -215,6 +240,10 @@ function init() {
   syncThemeButton();
 
   document.getElementById('retry').addEventListener('click', () => load({ force: true }));
+  syncRangePicker();
+  document.getElementById('range-picker').addEventListener('change', (e) => {
+    if (e.target?.name === 'range') setRangeChoice(Number(e.target.value));
+  });
   document.getElementById('table-link').addEventListener('click', () => {
     const details = document.getElementById('table');
     details.open = true;

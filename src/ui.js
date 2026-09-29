@@ -6,6 +6,7 @@ import {
   formatDateTime, formatAgo, formatIn, berlinParts, formatEndTime,
 } from './format.js';
 import { HOUR } from './analysis.js';
+import { config } from './config.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 
@@ -86,7 +87,7 @@ export function renderHero(result, { now }) {
     setField(root, 'ended', '');
     setField(root, 'range', result?.range ? rangeText(result) : '');
     empty.hidden = false;
-    empty.textContent = 'In den vorliegenden Daten gibt es kein ausreichend vollständiges 4-Stunden-Fenster innerhalb der letzten 36 Stunden.';
+    empty.textContent = `In den vorliegenden Daten gibt es kein ausreichend vollständiges 4-Stunden-Fenster innerhalb der letzten ${lookback} Stunden.`;
     return;
   }
   empty.hidden = true;
@@ -184,17 +185,18 @@ export function renderKpis({ current, result, now }) {
 
 // ---------- Chart-Kopf & Tabelle ----------
 
-export function renderChartMeta({ points, range, resolutionMinutes, now }) {
+export function renderChartMeta({ points, viewStart, viewHours, resolutionMinutes, now }) {
   $('#chart-card').dataset.state = 'ready';
   const lastEnd = points.length ? points[points.length - 1].end : now;
-  const xMin = range?.start ?? (points[0]?.start ?? now);
+  const xMin = viewStart ?? (points[0]?.start ?? now);
   const resLabel = resolutionMinutes === 60 ? 'Stundenwerte' : `${resolutionMinutes}-Minuten-Werte`;
-  $('#chart-subtitle').textContent = `${formatRange(xMin, Math.max(lastEnd, now))} · ${resLabel}`;
+  const spanLabel = viewHours ? `Letzte ${viewHours} h + bekannte Preise · ` : '';
+  $('#chart-subtitle').textContent = `${spanLabel}${formatRange(xMin, Math.max(lastEnd, now))} · ${resLabel}`;
 }
 
-export function renderTable({ points, range, slot, upcoming, now }) {
+export function renderTable({ points, viewStart, slot, upcoming, now }) {
   const tbody = $('#price-table tbody');
-  const xMin = range?.start ?? (points[0]?.start ?? now);
+  const xMin = viewStart ?? (points[0]?.start ?? now);
   const rows = points.filter((p) => p.end > xMin);
   tbody.replaceChildren();
   const frag = document.createDocumentFragment();
@@ -282,7 +284,7 @@ export function showError(attempts) {
   const allInsufficient = live.length > 0 && live.every((a) => a.kind === 'insufficient');
   const someInsufficient = live.some((a) => a.kind === 'insufficient');
   if (allInsufficient) {
-    text.textContent = `Die Quellen (${names.join(', ')}) waren erreichbar, lieferten aber keine ausreichenden Preisdaten für die letzten 36 Stunden.`;
+    text.textContent = `Die Quellen (${names.join(', ')}) waren erreichbar, lieferten aber keine ausreichenden Preisdaten für die letzten ${config.lookbackHours} Stunden.`;
   } else if (someInsufficient) {
     text.textContent = `Die Quellen (${names.join(', ')}) waren nicht erreichbar oder lieferten keine ausreichenden Preisdaten. Bitte später erneut versuchen.`;
   } else {

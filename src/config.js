@@ -2,7 +2,7 @@
 
 export const config = Object.freeze({
   /** Länge des Analysezeitraums in Stunden („die vergangenen 36 Stunden“). */
-  lookbackHours: 36,
+  lookbackHours: 72,
   /** Länge des gesuchten günstigsten Zeitfensters in Stunden. */
   slotHours: 4,
   /** Reihenfolge der Datenquellen (erste erreichbare Quelle mit ausreichend Daten gewinnt). */
@@ -12,7 +12,7 @@ export const config = Object.freeze({
   /** Timeout je HTTP-Anfrage in Millisekunden. */
   requestTimeoutMs: 6_000,
   /** Automatische Neuabfrage der Quellen (Minuten). Day-Ahead-Preise ändern sich nur einmal täglich. */
-  refreshMinutes: 30,
+  refreshMinutes: 60,
   /** Nach Rückkehr in den Tab neu laden, wenn der letzte Abruf älter ist als (Minuten). */
   refetchAfterHiddenMinutes: 10,
   /** Zwischengespeicherte Preisdaten (localStorage) werden so lange ohne Netzabruf wiederverwendet (Minuten). */
@@ -20,8 +20,11 @@ export const config = Object.freeze({
   /** Ab diesem Alter gilt der serverseitige Snapshot als veraltet (Stunden). */
   snapshotStaleHours: 6,
   /** Angefragter Datenbereich relativ zu „jetzt“ (Tage zurück / voraus). */
-  fetchDaysBack: 3,
+  fetchDaysBack: 4,
   fetchDaysAhead: 2,
+  /** Wählbare Zeiträume für das Diagramm (Stunden Rückblick ab jetzt; bekannte künftige Preise kommen immer dazu). */
+  chartRangeOptions: [24, 48, 72],
+  chartRangeDefault: 72,
   /** Gebotszone. */
   biddingZone: 'DE-LU',
 });

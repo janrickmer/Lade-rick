@@ -126,7 +126,7 @@ export class PriceChart {
 
   /**
    * @param {{ points:Array<{start:number,end:number,price:number}>, now:number, slot?:object|null, upcoming?:object|null,
-   *           range?:{start:number,end:number}, resolutionMinutes:number }} state
+   *           range?:{start:number,end:number}, viewStart?:number, resolutionMinutes:number }} state
    */
   update(state) {
     const keepTs = this.selected >= 0 && this.visible[this.selected] ? this.visible[this.selected].start : null;
@@ -164,7 +164,7 @@ export class PriceChart {
     const res = resolutionMinutes || 15;
     const nowFloor = floorToResolution(now, res);
     const lastEnd = points.length ? points[points.length - 1].end : now;
-    const xMin = range?.start ?? (points[0]?.start ?? now - 36 * HOUR);
+    const xMin = this.state.viewStart ?? range?.start ?? (points[0]?.start ?? now - 36 * HOUR);
     const xMax = Math.max(lastEnd, nowFloor + res * MINUTE, xMin + HOUR);
     const visible = points.filter((p) => p.end > xMin && p.start < xMax);
     this.visible = visible;

@@ -66,8 +66,12 @@ await scenario('Standardfall: SMARD liefert, Hero/Ausblick/Kennzahlen/Chart/Tabe
   assert.equal(await text(page, '#hero [data-field="time"]'), w.main.replace(/\s+/g, ' '));
   assert.equal(await text(page, '#hero [data-field="day"]'), w.overline);
   assert.equal(await text(page, '#hero [data-field="ct"]'), formatCt(expected.slot.meanPrice).replace(/\s+/g, ' '));
-  assert.match(await text(page, '#hero [data-field="compare"]'), /günstiger als der Durchschnitt der letzten 36 h/);
-  assert.match(await text(page, '#hero [data-field="range"]'), /Analysiert: .* \(36 h\)\./);
+  assert.match(await text(page, '#hero [data-field="compare"]'), /günstiger als der Durchschnitt der letzten 72 h/);
+  assert.match(await text(page, '#hero [data-field="range"]'), /Analysiert: .* \(72 h\)\./);
+  // Diagramm steht ganz oben, vor der Hero-Karte
+  assert.ok((await page.locator('#chart-card').boundingBox()).y < (await page.locator('#hero').boundingBox()).y, 'Chart über der Hero-Karte');
+  assert.equal(await page.locator('#range-72').isChecked(), true);
+  assert.match(await text(page, '#chart-subtitle'), /^Letzte 72 h \+ bekannte Preise · /);
   assert.equal(await page.locator('#hero [data-field="empty"]').isHidden(), true);
   assert.equal(await page.locator('#hero').getAttribute('data-state'), 'ready');
 
@@ -97,7 +101,7 @@ await scenario('Standardfall: SMARD liefert, Hero/Ausblick/Kennzahlen/Chart/Tabe
   assert.match(await text(page, '#chart-subtitle'), /15-Minuten-Werte$/);
 
   // Tabelle: alle Punkte ab Analysebeginn
-  const rowsExpected = base.points.filter((p) => p.end > expected.range.start).length;
+  const rowsExpected = base.points.filter((p) => p.end > r.viewStart).length;
   assert.equal(await page.locator('#price-table tbody tr').count(), rowsExpected);
   assert.match(await text(page, '#table-summary'), new RegExp(`\\(${rowsExpected} Zeilen\\)`));
   assert.equal(await page.locator('#price-table tbody tr.row-cheapest').count(), 16);
@@ -130,7 +134,7 @@ await scenario('Fallback: SMARD durch CORS blockiert → Energy-Charts, Statusme
   assert.deepEqual(r.attempts.map((a) => [a.id, a.ok, a.kind ?? null]), [['smard', false, 'network'], ['energy-charts', true, null]]);
   assert.equal(await text(page, '#status-msg'), 'SMARD.de war nicht erreichbar – die Daten stammen von Energy-Charts.');
   assert.match(await text(page, '#status-meta'), /^Daten: Bundesnetzagentur \| SMARD\.de via Energy-Charts \(Fraunhofer ISE\), CC BY 4\.0 · abgerufen/);
-  assert.ok(log.some((u) => u.startsWith('https://api.energy-charts.info/price?bzn=DE-LU&start=2026-09-25&end=2026-09-30')), log.join('\n'));
+  assert.ok(log.some((u) => u.startsWith('https://api.energy-charts.info/price?bzn=DE-LU&start=2026-09-24&end=2026-09-30')), log.join('\n'));
 });
 
 await scenario('Fallback: SMARD 503 und Energy-Charts 429 → aWATTar', async (page) => {
@@ -201,7 +205,7 @@ await scenario('Quellen erreichbar, aber ohne Daten im Analysezeitraum → spezi
   const r = await waitForRender(page);
   assert.equal(r.sourceId, null);
   assert.ok(r.attempts.filter((a) => a.id !== 'snapshot').every((a) => a.kind === 'insufficient'));
-  assert.match(await text(page, '#error-text'), /lieferten aber keine ausreichenden Preisdaten für die letzten 36 Stunden/);
+  assert.match(await text(page, '#error-text'), /lieferten aber keine ausreichenden Preisdaten für die letzten 72 Stunden/);
 });
 
 await scenario('Datenlücke: fehlende Viertelstunde im günstigsten Bereich → lückenloses Fenster, kein Näherungs-Hinweis', async (page) => {
@@ -240,7 +244,7 @@ await scenario('Negative Preise: Chip und Minus-Zeichen', async (page) => {
   assert.ok(r.slot.meanPrice < 0);
   assert.match(await text(page, '#hero [data-field="ct"]'), /^−\d+,\d ct\/kWh$/);
   assert.equal(await text(page, '#hero .chip'), 'negativer Preis');
-  assert.match(await text(page, '#hero [data-field="compare"]'), /unter dem Durchschnitt der letzten 36 h/);
+  assert.match(await text(page, '#hero [data-field="compare"]'), /unter dem Durchschnitt der letzten 72 h/);
 });
 
 await scenario('Ladezustand: Skelett und Statusmeldung, solange die Quellen nicht geantwortet haben', async (page) => {
@@ -288,7 +292,7 @@ await scenario('Chart-Interaktion: Hover-Tooltip, Tastaturnavigation, Screenread
   const out = await text(page, '#chart-output');
   assert.match(out, /^Mo\., 28\.09\., 13:45 – 14:00 Uhr: .* ct\/kWh \(.* €\/MWh\)/);
   await page.keyboard.press('Home');
-  assert.match(await text(page, '#chart-output'), /^So\., 27\.09\., 02:00 – 02:15 Uhr/);
+  assert.match(await text(page, '#chart-output'), /^Fr\., 25\.09\., 14:00 – 14:15 Uhr/);
   await page.keyboard.press('End');
   assert.match(await text(page, '#chart-output'), /^Di\., 29\.09\., 23:45 – 24:00 Uhr.*kommend/);
   await page.keyboard.press('Escape');
@@ -401,13 +405,14 @@ await scenario('Touch: Tippen auf das Diagramm zeigt den getippten Slot in der A
   await page.touchscreen.tap(box.x + 20, box.y + 60);
   await page.waitForFunction(() => document.querySelector('#chart-readout').textContent.includes('ct/kWh'));
   const first = await text(page, '#chart-readout');
-  assert.match(first, /^So\., 27\.09\., (0\d|1[0-2]):/, first);
+  assert.match(first, /^(Fr\., 25\.09\.|Sa\., 26\.09\.), /, first);
   await page.waitForTimeout(150);
   assert.equal(await text(page, '#chart-readout'), first, 'Auswahl bleibt nach dem Tippen erhalten');
-  await page.touchscreen.tap(box.x + box.width - 20, box.y + 60);
-  await page.waitForFunction(() => /Di\., 29\.09\., (1[5-9]|2[0-3]):/.test(document.querySelector('#chart-readout').textContent));
+  const box2 = await page.locator('#chart .hit-area').boundingBox();
+  await page.touchscreen.tap(box2.x + box2.width - 20, box2.y + 60);
+  await page.waitForFunction(() => /Di\., 29\.09\., (1[0-9]|2[0-3]):/.test(document.querySelector('#chart-readout').textContent));
   await page.waitForTimeout(150);
-  assert.match(await text(page, '#chart-readout'), /Di\., 29\.09\., (1[5-9]|2[0-3]):.*kommend/);
+  assert.match(await text(page, '#chart-readout'), /Di\., 29\.09\., (1[0-9]|2[0-3]):.*kommend/);
 }, { viewport: { width: 360, height: 780 }, hasTouch: true });
 
 await scenario('Kleines Display (320 px): Kennzahlen bleiben einzeilig, kein Überlauf', async (page) => {
@@ -474,6 +479,39 @@ await scenario('Veralteter Zwischenspeicher (gestern) zeigt Datum in der Statusz
   assert.equal(r.fromCache, true);
   assert.match(await text(page, '#status-meta'), /abgerufen 28\.09\.2026, 14:00 Uhr/);
 }, { storage: { 'laderick:cache:v1': JSON.stringify({ savedAt: Date.now() - 2 * 60 * MINUTE, attempts: [], series: { points: buildFixtureSet({ now: REFERENCE_NOW }).points, resolutionMinutes: 15, fetchedAt: REFERENCE_NOW, source: { id: 'smard', name: 'SMARD.de (Bundesnetzagentur)', url: 'https://www.smard.de/', licence: 'CC BY 4.0', attribution: '', operator: 'Bundesnetzagentur' } } }) } });
+
+await scenario('Zeitraum-Umschalter: 24/48/72 h ändern Diagramm und Tabelle, Auswahl wird gemerkt', async (page) => {
+  await mockSources(page, {});
+  await page.goto(url());
+  const r72 = await waitForRender(page);
+  assert.equal(r72.viewHours, 72);
+  assert.equal(r72.viewStart, Date.parse('2026-09-25T12:00:00Z'));
+  const rows72 = await page.locator('#price-table tbody tr').count();
+  await page.locator('label[for="range-24"]').click();
+  await page.waitForFunction(() => window.__LADERICK__?.viewHours === 24);
+  const r24 = await waitForRender(page);
+  assert.equal(r24.viewStart, Date.parse('2026-09-27T12:00:00Z'));
+  assert.match(await text(page, '#chart-subtitle'), /^Letzte 24 h \+ bekannte Preise · So\., 27\.09\., 14:00 – Di\., 29\.09\., 24:00 Uhr · 15-Minuten-Werte$/);
+  const rows24 = await page.locator('#price-table tbody tr').count();
+  assert.equal(rows24, rows72 - 48 * 4);
+  assert.equal(await page.locator('#chart svg .now-line').count(), 1);
+  const bandVisible = r24.slot && r24.slot.end > r24.viewStart ? 1 : 0;
+  assert.equal(await page.locator('#chart svg .band-cheapest').count(), bandVisible, 'Band nur, wenn das Fenster in der Ansicht liegt');
+  assert.equal(await page.evaluate(() => localStorage.getItem('laderick:range')), '24');
+  await page.locator('label[for="range-48"]').click();
+  await page.waitForFunction(() => window.__LADERICK__?.viewHours === 48);
+  assert.equal((await waitForRender(page)).viewStart, Date.parse('2026-09-26T12:00:00Z'));
+  await page.reload();
+  const again = await waitForRender(page);
+  assert.equal(again.viewHours, 48);
+  assert.equal(await page.locator('#range-48').isChecked(), true);
+  // Hero analysiert unabhängig von der Ansicht immer 72 h
+  assert.match(await text(page, '#hero [data-field="range"]'), /\(72 h\)\./);
+  // Tastatur: Pfeiltasten auf dem Umschalter
+  await page.locator('#range-48').focus();
+  await page.keyboard.press('ArrowRight');
+  await page.waitForFunction(() => window.__LADERICK__?.viewHours === 72);
+});
 
 // ---------------------------------------------------------------------------
 

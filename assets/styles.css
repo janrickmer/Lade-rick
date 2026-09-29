@@ -240,6 +240,15 @@ main { padding-bottom: 32px; }
 /* ---------- Chart ---------- */
 
 .chart-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.range-picker { border: 0; padding: 0; margin: 12px 0 0; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.range-legend { float: left; padding: 0; margin: 0 4px 0 0; font-size: 0.875rem; color: var(--ink-2); }
+.segmented { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.segmented input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: -1px; }
+.segmented label { padding: 5px 14px; font-size: 0.875rem; color: var(--ink-2); cursor: pointer; user-select: none; }
+.segmented label + input + label { border-left: 1px solid var(--border); }
+.segmented input:checked + label { background: var(--ink); color: var(--page); }
+.segmented input:focus-visible + label { outline: 2px solid var(--focus); outline-offset: -3px; }
+.range-hint { flex: 1 1 220px; font-size: 0.8125rem; min-width: 0; }
 .chart-readout {
   margin-top: 10px; min-height: 1.5em; font-size: 0.9375rem; color: var(--ink-2);
   font-variant-numeric: tabular-nums;

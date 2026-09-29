@@ -50,10 +50,55 @@
       <button id="retry" type="button" class="button">Erneut versuchen</button>
     </div>
 
+    <section class="card card-chart" aria-labelledby="chart-title" id="chart-card" data-state="loading">
+      <div class="chart-head">
+        <div>
+          <h2 id="chart-title" class="card-title">Preisverlauf</h2>
+          <p id="chart-subtitle" class="muted">&nbsp;</p>
+        </div>
+        <a href="#table" id="table-link" class="link">Als Tabelle anzeigen</a>
+      </div>
+      <fieldset class="range-picker" id="range-picker">
+        <legend class="range-legend">Zeitraum</legend>
+        <div class="segmented">
+          <input type="radio" name="range" id="range-24" value="24"><label for="range-24">24&nbsp;h</label>
+          <input type="radio" name="range" id="range-48" value="48"><label for="range-48">48&nbsp;h</label>
+          <input type="radio" name="range" id="range-72" value="72" checked><label for="range-72">72&nbsp;h</label>
+        </div>
+        <p class="range-hint muted">Rückblick ab jetzt, plus die bereits bekannten Preise für die kommenden Stunden.</p>
+      </fieldset>
+      <p id="chart-readout" class="chart-readout" aria-hidden="true">&nbsp;</p>
+      <div id="chart" class="chart" tabindex="0" role="group" aria-label="Preisverlauf, mit Pfeiltasten navigierbar"></div>
+      <output id="chart-output" class="sr-only" aria-live="polite"></output>
+      <ul class="legend" id="chart-legend" aria-label="Legende">
+        <li><span class="swatch swatch-line" aria-hidden="true"></span>Vergangene Preise</li>
+        <li><span class="swatch swatch-future" aria-hidden="true"></span>Kommende Preise (bereits bekannt)</li>
+        <li><span class="swatch swatch-cheapest" aria-hidden="true"></span>Günstigstes 4-h-Fenster</li>
+        <li><span class="swatch swatch-outlook" aria-hidden="true"></span>Ausblick (kommend)</li>
+      </ul>
+      <details id="table" class="table-details">
+        <summary id="table-summary">Alle Werte als Tabelle</summary>
+        <div class="table-wrap">
+          <table id="price-table">
+            <caption id="table-caption">Alle Börsenpreise</caption>
+            <thead>
+              <tr>
+                <th scope="col">Zeitfenster</th>
+                <th scope="col" class="num">ct/kWh</th>
+                <th scope="col" class="num">€/MWh</th>
+                <th scope="col">Markierung</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
     <section class="hero-grid" aria-label="Günstigste Zeitfenster">
       <article id="hero" class="card card-hero" aria-labelledby="hero-title" data-state="loading">
-        <p class="pill pill-past">Vergangen · letzte 36 Stunden</p>
-        <h2 id="hero-title" class="card-title">Günstigstes 4-Stunden-Fenster<span class="sr-only"> der letzten 36 Stunden</span></h2>
+        <p class="pill pill-past">Vergangen · letzte 72 Stunden</p>
+        <h2 id="hero-title" class="card-title">Günstigstes 4-Stunden-Fenster<span class="sr-only"> der letzten 72 Stunden</span></h2>
         <p class="hero-overline" data-field="day">&nbsp;</p>
         <p class="hero-time" data-field="time">&nbsp;</p>
         <p class="hero-price">
@@ -106,42 +151,6 @@
       </div>
     </section>
 
-    <section class="card card-chart" aria-labelledby="chart-title" id="chart-card" data-state="loading">
-      <div class="chart-head">
-        <div>
-          <h2 id="chart-title" class="card-title">Preisverlauf</h2>
-          <p id="chart-subtitle" class="muted">&nbsp;</p>
-        </div>
-        <a href="#table" id="table-link" class="link">Als Tabelle anzeigen</a>
-      </div>
-      <p id="chart-readout" class="chart-readout" aria-hidden="true">&nbsp;</p>
-      <div id="chart" class="chart" tabindex="0" role="group" aria-label="Preisverlauf, mit Pfeiltasten navigierbar"></div>
-      <output id="chart-output" class="sr-only" aria-live="polite"></output>
-      <ul class="legend" id="chart-legend" aria-label="Legende">
-        <li><span class="swatch swatch-line" aria-hidden="true"></span>Vergangene Preise</li>
-        <li><span class="swatch swatch-future" aria-hidden="true"></span>Kommende Preise (bereits bekannt)</li>
-        <li><span class="swatch swatch-cheapest" aria-hidden="true"></span>Günstigstes 4-h-Fenster</li>
-        <li><span class="swatch swatch-outlook" aria-hidden="true"></span>Ausblick (kommend)</li>
-      </ul>
-      <details id="table" class="table-details">
-        <summary id="table-summary">Alle Werte als Tabelle</summary>
-        <div class="table-wrap">
-          <table id="price-table">
-            <caption id="table-caption">Alle Börsenpreise</caption>
-            <thead>
-              <tr>
-                <th scope="col">Zeitfenster</th>
-                <th scope="col" class="num">ct/kWh</th>
-                <th scope="col" class="num">€/MWh</th>
-                <th scope="col">Markierung</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </details>
-    </section>
-
     <p id="status-meta" class="status-meta muted"></p>
 
 
@@ -152,8 +161,11 @@
       <p>LadeRick zeigt den Preis der täglichen Day-Ahead-Auktion der Strombörse EPEX SPOT für die Gebotszone
         Deutschland/Luxemburg (DE-LU). Das ist der Großhandelspreis, auf den sich dynamische Stromtarife beziehen.
         Seit dem 1.&nbsp;Oktober&nbsp;2025 wird dieser Preis in 15-Minuten-Abschnitten gehandelt; davor galt ein Preis je Stunde.
-        Die Preise für den Folgetag werden täglich (auch am Wochenende) gegen 12:45–13:15&nbsp;Uhr veröffentlicht und
-        ändern sich danach nicht mehr. Alle Uhrzeiten auf dieser Seite sind deutsche Zeit (MEZ/MESZ).</p>
+        Die Preise für den Folgetag werden in einer täglichen Auktion (auch am Wochenende) ermittelt und gegen
+        12:45–13:15&nbsp;Uhr veröffentlicht. Ab dann stehen sie fest: Die hier als „kommend“ gezeigten Preise sind
+        Auktionsergebnisse, keine Prognose. Davon zu unterscheiden ist der Intraday-Handel, in dem bis kurz vor der
+        Lieferung weiter gehandelt wird; dynamische Haushaltstarife rechnen aber mit dem Day-Ahead-Preis ab.
+        Alle Uhrzeiten auf dieser Seite sind deutsche Zeit (MEZ/MESZ).</p>
 
       <h3>Was heißt das für meinen Tarif?</h3>
       <p>Bei einem dynamischen Stromtarif setzt sich der Preis aus dem hier gezeigten Börsenpreis plus festen Bestandteilen
@@ -164,7 +176,7 @@
         sich je nach Netzgebiet und Anbieter; LadeRick zeigt sie nicht.</p>
 
       <h3>So wird das günstigste Fenster berechnet</h3>
-      <p>Über die vergangenen 36 Stunden – bis zum Ende der letzten vollständig abgeschlossenen Viertelstunde – wird ein
+      <p>Über die vergangenen 72 Stunden – bis zum Ende der letzten vollständig abgeschlossenen Viertelstunde – wird ein
         gleitendes 4-Stunden-Fenster gelegt (Schrittweite = Datenauflösung, in der Regel 15 Minuten). Für jedes Fenster wird der
         zeitgewichtete Mittelwert gebildet; das Fenster mit dem niedrigsten Mittel wird angezeigt. Bei gleichem Mittel gewinnt
         das frühere Fenster. Fehlen einzelne Werte, werden nur lückenlose Fenster berücksichtigt; gibt es keines, wird das beste
@@ -193,6 +205,8 @@
         <li><strong>Zwischenspeicher</strong> – falls keine Quelle direkt erreichbar ist, wird eine serverseitig erstellte Kopie der
           letzten Daten angezeigt und als solche gekennzeichnet.</li>
       </ol>
+      <p>Die Seite ruft die Daten beim Öffnen ab und aktualisiert sie danach automatisch jede Stunde; der serverseitige
+        Zwischenspeicher wird ebenfalls stündlich erneuert.</p>
 
       <h3 id="datenschutz">Datenschutz</h3>
       <p>LadeRick benötigt keine Anmeldung, setzt keine Cookies und verwendet kein Tracking. Die Preisdaten ruft der Browser
