@@ -77,6 +77,40 @@ try {
   console.log(`\n## aWATTar\nFehler: ${err.message}`);
 }
 
+// Werte-Abgleich für heute (Europe/Berlin): Viertelstunden SMARD ↔ Energy-Charts, Stunden aWATTar ↔ Mittel der SMARD-Viertelstunden
+try {
+  const smardIdx = await get('https://www.smard.de/app/chart_data/4169/DE/index_quarterhour.json');
+  const stamps = (smardIdx.body?.timestamps ?? []).map(Number).sort((a, b) => a - b).slice(-2);
+  const smard = new Map();
+  for (const ts of stamps) {
+    const f = await get(`https://www.smard.de/app/chart_data/4169/DE/4169_DE_quarterhour_${ts}.json`);
+    for (const [t, v] of f.body?.series ?? []) if (v !== null) smard.set(t, v);
+  }
+  const ec = await get(`https://api.energy-charts.info/price?bzn=DE-LU&start=${ymd(now - 86_400_000)}&end=${ymd(now + 86_400_000)}`);
+  console.log(`\n## Werte-Abgleich\n  Energy-Charts license_info: ${ec.body?.license_info ?? '–'}`);
+  let n = 0; let maxDiff = 0;
+  (ec.body?.unix_seconds ?? []).forEach((s, i) => {
+    const v = ec.body.price[i];
+    if (v === null || !smard.has(s * 1000)) return;
+    n += 1; maxDiff = Math.max(maxDiff, Math.abs(v - smard.get(s * 1000)));
+  });
+  console.log(`  Energy-Charts vs. SMARD (Viertelstunden): ${n} gemeinsame Werte, max. Abweichung ${maxDiff.toFixed(3)} €/MWh`);
+  const aw = await get(`https://api.awattar.de/v1/marketdata?start=${now - 2 * 86_400_000}&end=${now + 2 * 86_400_000}`);
+  let m = 0; let maxAw = 0; let maxAwRounded = 0; const samples = [];
+  for (const e of aw.body?.data ?? []) {
+    const q = [0, 1, 2, 3].map((k) => smard.get(e.start_timestamp + k * 900_000));
+    if (q.some((v) => v === undefined)) continue;
+    const mean = q.reduce((a, b) => a + b, 0) / 4;
+    m += 1; maxAw = Math.max(maxAw, Math.abs(e.marketprice - mean));
+    maxAwRounded = Math.max(maxAwRounded, Math.abs(e.marketprice - Math.round(mean * 100) / 100));
+    if (samples.length < 3) samples.push(`${berlin(e.start_timestamp)}: aWATTar ${e.marketprice} / Mittel SMARD ${mean.toFixed(3)} (${q.join(', ')})`);
+  }
+  console.log(`  aWATTar vs. Mittel der SMARD-Viertelstunden: ${m} Stunden, max. Abweichung ${maxAw.toFixed(3)} €/MWh (gegen gerundetes Mittel ${maxAwRounded.toFixed(3)})`);
+  for (const s of samples) console.log(`    ${s}`);
+} catch (err) {
+  console.log(`\n## Werte-Abgleich\nFehler: ${err.message}`);
+}
+
 // Live-Seite im echten Browser (CORS wird nur hier wirksam)
 if (site) {
   const { chromium } = await import('playwright');
