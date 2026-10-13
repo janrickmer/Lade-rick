@@ -1,0 +1,24 @@
+name: Quellen-Check
+
+# Manuell startbar: prüft je Datenquelle CORS-/Cache-Header und bis wann Preise bekannt sind,
+# und öffnet die Live-Seite in Chromium, um die tatsächlich genutzte Quelle zu sehen.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Quellen prüfen
+        run: node scripts/probe-sources.mjs --site https://laderick.janrickmer.de
