@@ -118,6 +118,8 @@ if (site) {
   for (const source of [null, 'smard', 'energy-charts', 'awattar', 'snapshot']) {
     const ctx = await browser.newContext({ locale: 'de-DE', timezoneId: 'Europe/Berlin' });
     const page = await ctx.newPage();
+    const consoleErrors = [];
+    page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 200)); });
     const url = source ? `${site}/?source=${source}` : `${site}/`;
     try {
       await page.goto(url, { waitUntil: 'load', timeout: 30_000 });
@@ -131,10 +133,12 @@ if (site) {
           attempts: (L.attempts ?? []).map((a) => `${a.id}${a.role === 'supplement' ? ' (Ergänzung)' : ''}:${a.ok ? 'ok' : a.kind}`).join(', '),
           supplements: (L.series?.supplements ?? []).map((x) => `${x.source.id} ${new Date(x.from).toISOString()} – ${new Date(x.until).toISOString()} (${x.resolutionMinutes} min)`).join('; '),
           note: document.getElementById('chart-supplement')?.hidden === false ? document.getElementById('chart-supplement').textContent : '',
+          version: document.getElementById('chart-supplement') ? 'mit Ergänzungslogik' : 'ältere Version',
+          nextLoadAt: Number.isFinite(L.nextLoadAt) ? L.nextLoadAt : null,
           status: document.getElementById('status-meta')?.textContent?.replace(/\s+/g, ' ').trim() ?? '',
         };
       });
-      console.log(`\n## Browser ${url}\n  Quelle: ${r.source}${r.snapshotOf ? ` (Snapshot von ${r.snapshotOf})` : ''}\n  Versuche: ${r.attempts}\n  Ergänzungen: ${r.supplements || '–'}\n  bekannte Preise bis: ${berlin(r.lastEnd)}\n  Hinweis unter dem Diagramm: ${r.note || '–'}\n  Statuszeile: ${r.status}`);
+      console.log(`\n## Browser ${url}\n  Quelle: ${r.source}${r.snapshotOf ? ` (Snapshot von ${r.snapshotOf})` : ''}\n  Versuche: ${r.attempts}\n  Ergänzungen: ${r.supplements || '–'}\n  bekannte Preise bis: ${berlin(r.lastEnd)}\n  Hinweis unter dem Diagramm: ${r.note || '–'}\n  Statuszeile: ${r.status}\n  Seitenversion: ${r.version}${r.nextLoadAt ? `, nächster Abruf ${berlin(r.nextLoadAt)}` : ''}\n  Konsolenfehler: ${consoleErrors.length ? consoleErrors.join(' | ') : 'keine'}`);
     } catch (err) {
       console.log(`\n## Browser ${url}\nFehler: ${err.message}`);
     } finally {
