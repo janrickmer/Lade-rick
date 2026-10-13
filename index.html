@@ -75,6 +75,7 @@
         <li><span class="swatch swatch-future" aria-hidden="true"></span>Kommende Preise (bereits bekannt)</li>
         <li id="legend-cheapest"><span class="swatch swatch-cheapest" aria-hidden="true"></span>Günstigstes kommendes 4-h-Fenster</li>
       </ul>
+      <p id="chart-supplement" class="chart-note" hidden></p>
       <details id="table" class="table-details">
         <summary id="table-summary">Alle Werte als Tabelle</summary>
         <div class="table-wrap">
@@ -165,8 +166,8 @@
       <p>LadeRick zeigt den Preis der täglichen Day-Ahead-Auktion der Strombörse EPEX SPOT für die Gebotszone
         Deutschland/Luxemburg (DE-LU). Das ist der Großhandelspreis, auf den sich dynamische Stromtarife beziehen.
         Seit dem 1.&nbsp;Oktober&nbsp;2025 wird dieser Preis in 15-Minuten-Abschnitten gehandelt; davor galt ein Preis je Stunde.
-        Die Preise für den Folgetag werden in einer täglichen Auktion (auch am Wochenende) ermittelt und gegen
-        12:45–13:15&nbsp;Uhr veröffentlicht. Ab dann stehen sie fest: Die hier als „kommend“ gezeigten Preise sind
+        Die Preise für den Folgetag werden in einer täglichen Auktion (auch am Wochenende) ermittelt und frühestens um
+        12:55&nbsp;Uhr veröffentlicht, bei Verzögerungen der Auktion auch später. Ab dann stehen sie fest: Die hier als „kommend“ gezeigten Preise sind
         Auktionsergebnisse, keine Prognose. Davon zu unterscheiden ist der Intraday-Handel, in dem bis kurz vor der
         Lieferung weiter gehandelt wird; dynamische Haushaltstarife rechnen aber mit dem Day-Ahead-Preis ab.
         Alle Uhrzeiten auf dieser Seite sind deutsche Zeit (MEZ/MESZ).</p>
@@ -204,24 +205,32 @@
       <details class="info-details" id="quellen">
         <summary><h3>Datenquellen</h3></summary>
         <p>LadeRick greift ausschließlich auf öffentliche, regelmäßig aktualisierte Quellen zu. Die erste erreichbare Quelle mit
-          ausreichend Daten wird verwendet; welche das ist, steht in der Statuszeile unter den Kennzahlen.</p>
+          ausreichend Daten wird verwendet; welche das ist, steht in der Statuszeile unter den Kennzahlen. Fehlen dort Preise,
+          die bereits veröffentlicht sein müssten – typischerweise nach 12:55&nbsp;Uhr die Preise für morgen, die SMARD.de oft
+          erst Stunden später nachträgt, an einzelnen Tagen auch Preise des laufenden Tags –, ergänzt LadeRick nur diese
+          fehlenden Zeiträume aus aWATTar. Unter dem Diagramm steht dann ein Hinweis; sobald die Hauptquelle nachzieht, werden
+          ihre Werte übernommen. Alle Quellen geben dieselbe Day-Ahead-Auktion der EPEX SPOT wieder; aWATTar liefert
+          Stundenwerte, die dem Mittel der vier Viertelstundenpreise entsprechen.</p>
         <ol class="source-list">
           <li><strong><a href="https://www.smard.de/" rel="noopener">SMARD.de</a></strong> – Strommarktdaten der Bundesnetzagentur.
             Großhandelspreise Deutschland/Luxemburg, Lizenz
             <a href="https://creativecommons.org/licenses/by/4.0/deed.de" rel="noopener">CC&nbsp;BY&nbsp;4.0</a>.
             Quellenangabe: „Bundesnetzagentur | SMARD.de“.</li>
           <li><strong><a href="https://www.energy-charts.info/" rel="noopener">Energy-Charts</a></strong> – Datenplattform des
-            Fraunhofer-Instituts für Solare Energiesysteme ISE. Die DE-LU-Preise werden dort unverändert von SMARD.de übernommen
-            (Lizenz CC&nbsp;BY&nbsp;4.0, Quellenangabe „Bundesnetzagentur | SMARD.de via energy-charts.info (Fraunhofer ISE)“).</li>
+            Fraunhofer-Instituts für Solare Energiesysteme ISE. Die DE-LU-Preise stimmen mit denen von SMARD.de überein, liegen
+            dort aber oft früher vor (Lizenz CC&nbsp;BY&nbsp;4.0, Quellenangabe „Bundesnetzagentur | SMARD.de via energy-charts.info
+            (Fraunhofer ISE)“). Energy-Charts gibt seine Schnittstelle derzeit nicht für den direkten Abruf aus dem Browser fremder
+            Seiten frei; LadeRick nutzt sie deshalb vor allem für den serverseitigen Zwischenspeicher.</li>
           <li><strong><a href="https://www.awattar.de/" rel="noopener">aWATTar</a></strong> – öffentliche Marktdaten-Schnittstelle des
             Stromanbieters aWATTar GmbH mit den EPEX-SPOT-Day-Ahead-Preisen für Deutschland (reiner Börsenpreis ohne Aufschlag).</li>
           <li><strong>Zwischenspeicher</strong> – falls keine Quelle direkt erreichbar ist, wird eine serverseitig erstellte Kopie der
             letzten Daten angezeigt und als solche gekennzeichnet.</li>
         </ol>
         <p>Die Seite ruft die Daten beim Öffnen ab – wurde sie innerhalb der letzten 10 Minuten bereits geladen, zunächst aus
-          dem lokalen Speicher des Browsers – und aktualisiert sie danach automatisch jede Stunde sowie beim Zurückkehren in
-          den Tab, wenn der letzte Abruf länger als 10 Minuten zurückliegt. Der serverseitige Zwischenspeicher wird ebenfalls
-          stündlich erneuert.</p>
+          dem lokalen Speicher des Browsers – und aktualisiert sie danach automatisch jede Stunde, ab 12:55&nbsp;Uhr alle
+          5&nbsp;Minuten, bis die Preise für morgen vorliegen (solange sie nur ergänzt sind, alle 30&nbsp;Minuten), sowie beim
+          Zurückkehren in den Tab, wenn der letzte Abruf länger als 10 Minuten zurückliegt. Der serverseitige Zwischenspeicher wird planmäßig stündlich erneuert; GitHub führt solche
+          geplanten Läufe allerdings teils deutlich seltener aus.</p>
       </details>
     </section>
 

@@ -20,10 +20,14 @@ const outFile = resolve(root, outIdx >= 0 ? args[outIdx + 1] : 'data/prices.json
 
 const now = Date.now();
 const order = config.sourceOrder.filter((id) => id !== 'snapshot');
-const { series, attempts } = await fetchPrices({ now, order, timeoutMs: 20_000 });
+// Serverseitig gibt es keine CORS-Sperre: zum Ergänzen zuerst Energy-Charts (Viertelstunden, identisch mit SMARD.de),
+// danach aWATTar (Stundenmittel).
+const supplementOrder = ['energy-charts', 'awattar'];
+const { series, attempts } = await fetchPrices({ now, order, supplementOrder, timeoutMs: 20_000 });
 
 for (const a of attempts) {
-  console.log(`${a.ok ? 'OK  ' : 'FAIL'} ${a.id.padEnd(14)} ${a.ms} ms${a.error ? ` – ${a.error}` : ''}${a.coveredHours !== undefined ? ` – ${a.coveredHours.toFixed(1)} h im Analysezeitraum` : ''}`);
+  const role = a.role === 'supplement' ? ' (Ergänzung)' : '';
+  console.log(`${a.ok ? 'OK  ' : 'FAIL'} ${a.id.padEnd(14)}${role} ${a.ms} ms${a.error ? ` – ${a.error}` : ''}${a.coveredHours !== undefined ? ` – ${a.coveredHours.toFixed(1)} h im Analysezeitraum` : ''}${a.addedHours !== undefined ? ` – ${a.addedHours.toFixed(2)} h ergänzt` : ''}`);
 }
 
 if (!series) {
@@ -41,9 +45,11 @@ const snapshot = {
   resolutionMinutes: series.resolutionMinutes,
   unit: 'EUR/MWh',
   source: series.source,
+  ...(series.supplements?.length ? { supplements: series.supplements } : {}),
   points,
 };
 
 await mkdir(dirname(outFile), { recursive: true });
 await writeFile(outFile, `${JSON.stringify(snapshot)}\n`);
-console.log(`Snapshot geschrieben: ${outFile} (${points.length} Punkte, Quelle ${series.source.id}, bis ${new Date(points.at(-1).end).toISOString()})`);
+const extra = series.supplements?.length ? `, ergänzt aus ${series.supplements.map((s) => `${s.source.id} ab ${new Date(s.from).toISOString()}`).join(', ')}` : '';
+console.log(`Snapshot geschrieben: ${outFile} (${points.length} Punkte, Quelle ${series.source.id}${extra}, bis ${new Date(points.at(-1).end).toISOString()})`);

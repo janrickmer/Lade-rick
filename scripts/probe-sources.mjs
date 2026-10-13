@@ -128,11 +128,13 @@ if (site) {
           source: L.series?.source?.id ?? null,
           snapshotOf: L.series?.snapshotOf?.id ?? null,
           lastEnd: L.series?.points?.at(-1)?.end ?? null,
-          attempts: (L.attempts ?? []).map((a) => `${a.id}:${a.ok ? 'ok' : a.kind}`).join(', '),
+          attempts: (L.attempts ?? []).map((a) => `${a.id}${a.role === 'supplement' ? ' (Ergänzung)' : ''}:${a.ok ? 'ok' : a.kind}`).join(', '),
+          supplements: (L.series?.supplements ?? []).map((x) => `${x.source.id} ${new Date(x.from).toISOString()} – ${new Date(x.until).toISOString()} (${x.resolutionMinutes} min)`).join('; '),
+          note: document.getElementById('chart-supplement')?.hidden === false ? document.getElementById('chart-supplement').textContent : '',
           status: document.getElementById('status-meta')?.textContent?.replace(/\s+/g, ' ').trim() ?? '',
         };
       });
-      console.log(`\n## Browser ${url}\n  Quelle: ${r.source}${r.snapshotOf ? ` (Snapshot von ${r.snapshotOf})` : ''}\n  Versuche: ${r.attempts}\n  bekannte Preise bis: ${berlin(r.lastEnd)}\n  Statuszeile: ${r.status}`);
+      console.log(`\n## Browser ${url}\n  Quelle: ${r.source}${r.snapshotOf ? ` (Snapshot von ${r.snapshotOf})` : ''}\n  Versuche: ${r.attempts}\n  Ergänzungen: ${r.supplements || '–'}\n  bekannte Preise bis: ${berlin(r.lastEnd)}\n  Hinweis unter dem Diagramm: ${r.note || '–'}\n  Statuszeile: ${r.status}`);
     } catch (err) {
       console.log(`\n## Browser ${url}\nFehler: ${err.message}`);
     } finally {

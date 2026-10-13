@@ -2,7 +2,7 @@
 // Analyse, Rendering, Auto-Aktualisierung und Theme-Umschaltung. Keine Nutzerdaten, keine Cookies.
 
 import { config } from './config.js';
-import { fetchPrices } from './sources.js';
+import { fetchPrices, nextRefreshAt } from './sources.js';
 import { cheapestSlot, cheapestUpcomingSlot, cheapestStartTimeOfDay, currentPoint, HOUR, MINUTE } from './analysis.js';
 import { computeView, berlinParts } from './format.js';
 
@@ -30,6 +30,10 @@ const state = {
   series: null,
   attempts: [],
   lastFetchAt: 0,
+  /** letzter Abrufversuch (auch erfolglos) und nächster geplanter Abruf, Epoch-ms */
+  lastAttemptAt: 0,
+  nextLoadAt: Infinity,
+  loadTimer: undefined,
   loading: false,
   chart: null,
   viewDays: readDaysChoice(),
@@ -107,7 +111,8 @@ function render({ fromCache = false, notBefore = 0 } = {}) {
   ui.renderStartTime(startTime);
   ui.renderOutlook(upcoming, { now, knownUntil });
   ui.renderKpis({ current, result, now });
-  ui.renderChartMeta({ points: series.points, view, resolutionMinutes: series.resolutionMinutes, now });
+  ui.renderChartMeta({ points: series.points, view, resolutionMinutes: series.resolutionMinutes, supplements: series.supplements, now });
+  ui.renderSupplementNote(series, now);
   ui.renderTable({ points: series.points, view, cheapest: upcoming, now });
   ui.renderStatusMeta({ series, attempts, now, knownUntil });
   state.chart.update({
@@ -122,7 +127,7 @@ function render({ fromCache = false, notBefore = 0 } = {}) {
   ui.hideError();
   if (!fromCache) ui.setStatusMessage(ui.statusAfterLoad({ series, attempts, now, knownUntil }));
 
-  window.__LADERICK__ = { series, result, upcoming, startTime, current, attempts, now, fromCache, viewDays: state.viewDays, viewStart: view.viewStart, viewEnd: view.viewEnd, viewLabel: view.label };
+  window.__LADERICK__ = { series, result, upcoming, startTime, current, attempts, now, fromCache, viewDays: state.viewDays, viewStart: view.viewStart, viewEnd: view.viewEnd, viewLabel: view.label, nextLoadAt: state.nextLoadAt };
   document.dispatchEvent(new CustomEvent('laderick:rendered', { detail: window.__LADERICK__ }));
 
   // Grüne Markierung (Diagramm/Tabelle) und Legende nur, wenn das kommende Fenster im gewählten Zeitraum liegt
@@ -159,6 +164,8 @@ function watchdog() {
   const expectedWall = state.renderWall + (performance.now() - state.renderPerf);
   const started = state.shownUpcomingStart !== null && wall >= state.shownUpcomingStart;
   if (started || Math.abs(wall - expectedWall) > 2000) render({ fromCache: true });
+  // Abruf überfällig (Timer im Hintergrund-Tab gedrosselt, Standby, Uhrsprung): jetzt nachholen
+  if (!state.loading && wall >= state.nextLoadAt + 5000) load();
 }
 
 // ---------- Laden ----------
@@ -179,7 +186,12 @@ async function load({ force = false } = {}) {
         state.lastFetchAt = cached.savedAt;
         render({ fromCache: true });
         ui.setStatusMessage(ui.statusAfterLoad({ series: cached.series, attempts: state.attempts, now, knownUntil: cached.series.points.at(-1)?.end ?? null }));
-        if (Date.now() - cached.savedAt < config.cacheTtlMinutes * MINUTE) {
+        // Frisch nur, solange weder die Cache-Dauer abgelaufen noch ein früherer Abruf fällig ist – fehlen z. B. nach
+        // 12:55 Uhr die Preise für morgen, wird nach wenigen Minuten neu abgefragt statt erst nach 10 Minuten.
+        const freshUntil = Math.min(cached.savedAt + config.cacheTtlMinutes * MINUTE, nextRefreshAt(cached.series, cached.savedAt, now));
+        if (Date.now() < freshUntil) {
+          state.lastAttemptAt = cached.savedAt;
+          scheduleNextLoad(freshUntil);
           state.loading = false;
           return;
         }
@@ -193,6 +205,7 @@ async function load({ force = false } = {}) {
   }
 
   // 2) Netzabruf über die Fallback-Kette
+  state.lastAttemptAt = Date.now();
   try {
     await fetchAndRender(now);
   } catch (err) {
@@ -202,7 +215,33 @@ async function load({ force = false } = {}) {
     else ui.setStatusMessage('Aktualisierung fehlgeschlagen – es werden die zuletzt geladenen Daten angezeigt.');
   } finally {
     state.loading = false;
+    scheduleNextLoad();
   }
+}
+
+const RETRY_AFTER_FAILURE_MS = 15 * MINUTE;
+
+/**
+ * Nächsten Abruf planen: stündlich, aber alle 5 Minuten, solange erwartete Preise fehlen (z. B. nach 12:55 Uhr die
+ * Preise für morgen), und alle 30 Minuten, solange Preise nur aus einer ergänzenden Quelle stammen (siehe nextRefreshAt).
+ * Nach einem fehlgeschlagenen Abruf spätestens nach 15 Minuten erneut.
+ * @param {number} [at] fester Zeitpunkt (Epoch-ms), sonst aus dem Datenstand berechnet
+ */
+function scheduleNextLoad(at) {
+  window.clearTimeout(state.loadTimer);
+  let next = at;
+  if (next === undefined) {
+    if (Number.isFinite(nowOverride)) {
+      next = state.lastAttemptAt + config.refreshMinutes * MINUTE; // Testmodus: fester Takt
+    } else {
+      next = nextRefreshAt(state.series, state.lastAttemptAt, getNow());
+      if (state.lastFetchAt < state.lastAttemptAt) next = Math.min(next, state.lastAttemptAt + RETRY_AFTER_FAILURE_MS);
+    }
+  }
+  next = Math.max(next, Date.now() + 30_000); // nie in Schleife
+  state.nextLoadAt = next;
+  if (window.__LADERICK__) window.__LADERICK__.nextLoadAt = next;
+  state.loadTimer = window.setTimeout(() => load(), next - Date.now());
 }
 
 async function fetchAndRender(now) {
@@ -213,7 +252,7 @@ async function fetchAndRender(now) {
     now,
     order,
     onAttempt: (a) => {
-      if (a.ok || state.series) return;
+      if (a.ok || state.series || a.role === 'supplement') return;
       const idx = order.indexOf(a.id);
       const next = order[idx + 1];
       ui.setStatusMessage(next
@@ -326,9 +365,8 @@ function init() {
 
   load();
 
-  // Neuabfrage der Quellen in festem Takt …
-  window.setInterval(() => load(), config.refreshMinutes * MINUTE);
-  // … lokale Neuberechnung (Jetzt-Linie, aktueller Preis, Ausblick) jede Minute ohne Netzabruf …
+  // Neuabfrage der Quellen: geplant nach jedem Abruf (scheduleNextLoad) – stündlich, enger getaktet, solange erwartete
+  // Preise fehlen; lokale Neuberechnung (Jetzt-Linie, aktueller Preis, Ausblick) jede Minute ohne Netzabruf …
   window.setInterval(() => { if (state.series && !Number.isFinite(nowOverride)) render({ fromCache: true }); }, MINUTE);
   window.setInterval(watchdog, 1000);
   window.addEventListener('focus', () => { if (state.series) render({ fromCache: true }); });
@@ -337,7 +375,7 @@ function init() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
     if (state.series) render({ fromCache: true });
-    if (Date.now() - state.lastFetchAt > config.refetchAfterHiddenMinutes * MINUTE) load();
+    if (Date.now() >= state.nextLoadAt || Date.now() - state.lastAttemptAt > config.refetchAfterHiddenMinutes * MINUTE) load();
   });
   // Rückkehr per Zurück-Taste aus dem Browser-Cache (bfcache): ebenfalls sofort neu rechnen
   window.addEventListener('pageshow', (e) => { if (e.persisted && state.series) render({ fromCache: true }); });

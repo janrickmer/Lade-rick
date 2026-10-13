@@ -318,6 +318,8 @@ main { padding-bottom: 32px; }
 .swatch-line { height: 0; border-top: 2px solid var(--series-1); border-radius: 0; }
 .swatch-future { background: var(--future-wash); border-top: 2px solid var(--series-1); border-radius: 0; }
 .swatch-cheapest { background: var(--series-2-wash); border-top: 3px solid var(--series-2); border-radius: 0; }
+/* Dezenter Hinweis, wenn Preise vorerst nur aus einer ergänzenden Drittanbieter-Quelle stammen */
+.chart-note { margin: 10px 0 0; font-size: 0.8125rem; line-height: 1.45; color: var(--muted); }
 
 /* ---------- Tabelle ---------- */
 

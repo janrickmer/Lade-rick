@@ -7,6 +7,7 @@ import {
 } from './format.js';
 import { HOUR } from './analysis.js';
 import { config } from './config.js';
+import { expectedCoverageEnd } from './sources.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 
@@ -217,12 +218,16 @@ export function renderKpis({ current, result, now }) {
 
 // ---------- Chart-Kopf & Tabelle ----------
 
-export function renderChartMeta({ points, view, resolutionMinutes, now }) {
+const resolutionLabel = (minutes) => (minutes === 60 ? 'Stundenwerte' : `${minutes}-Minuten-Werte`);
+
+export function renderChartMeta({ points, view, resolutionMinutes, supplements, now }) {
   $('#chart-card').dataset.state = 'ready';
   const lastEnd = points.length ? points[points.length - 1].end : now;
   const xMin = view?.viewStart ?? (points[0]?.start ?? now);
   const xMax = view?.viewEnd ?? Math.max(lastEnd, now);
-  const resLabel = resolutionMinutes === 60 ? 'Stundenwerte' : `${resolutionMinutes}-Minuten-Werte`;
+  let resLabel = resolutionLabel(resolutionMinutes);
+  const coarser = (supplements ?? []).find((s) => s.resolutionMinutes > resolutionMinutes && s.until > xMin && s.from < xMax);
+  if (coarser) resLabel += `, teils ${resolutionLabel(coarser.resolutionMinutes)}`;
   const dayLabel = view?.label ? `${view.label} · ` : '';
   $('#chart-subtitle').textContent = `${dayLabel}${formatRange(xMin, xMax)} · ${resLabel}`;
   const hint = $('#range-hint');
@@ -231,6 +236,42 @@ export function renderChartMeta({ points, view, resolutionMinutes, now }) {
       ? `${view.label}: ${formatRange(xMin, xMax)}.${view.tomorrowKnown ? '' : ' Die Preise für morgen erscheinen täglich gegen 13 Uhr.'}`
       : '';
   }
+}
+
+/** Name der Hauptquelle (bei einem Snapshot die Originalquelle). */
+function primaryName(series) {
+  const meta = series.source.id === 'snapshot' ? (series.snapshotOf ?? series.source) : series.source;
+  return shortName(meta.id);
+}
+
+/** Ergänzte Zeiträume, die für die Anzeige noch relevant sind (im Analysezeitraum oder später). */
+function activeSupplements(series, now) {
+  return (series?.supplements ?? []).filter((s) => s.until > now - config.lookbackHours * HOUR);
+}
+
+/** „A“, „A und B“, „A, B und C“ */
+function joinList(items) {
+  return items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} und ${items[items.length - 1]}`;
+}
+
+/**
+ * Dezenter Hinweis unter dem Diagramm, solange Preise nur aus einer ergänzenden Drittanbieter-Quelle stammen,
+ * weil die Hauptquelle (SMARD.de) sie noch nicht veröffentlicht hat.
+ */
+export function renderSupplementNote(series, now) {
+  const el = $('#chart-supplement');
+  if (!el) return;
+  const list = activeSupplements(series, now);
+  if (!list.length) { el.hidden = true; el.textContent = ''; return; }
+  const ranges = list.length <= 3
+    ? joinList(list.map((s) => formatRange(s.from, s.until)))
+    : `mehrere Zeiträume zwischen ${formatRange(Math.min(...list.map((s) => s.from)), Math.max(...list.map((s) => s.until)))}`;
+  const names = joinList([...new Set(list.map((s) => shortName(s.source.id)))]);
+  const hourly = list.some((s) => s.resolutionMinutes === 60) && series.resolutionMinutes !== 60 ? ' (als Stundenwerte)' : '';
+  const main = primaryName(series);
+  el.textContent = `Hinweis: Die Preise für ${ranges} liegen bisher nur von der Drittanbieter-Quelle ${names} vor${hourly}, `
+    + `noch nicht von der Hauptquelle ${main}. Sobald ${main} sie veröffentlicht, werden sie automatisch übernommen.`;
+  el.hidden = false;
 }
 
 export function renderTable({ points, view, cheapest, now }) {
@@ -291,6 +332,12 @@ export function renderStatusMeta({ series, now, knownUntil }) {
     const sameDay = berlinParts(series.fetchedAt).ymd === berlinParts(now).ymd;
     parts.push(`abgerufen ${sameDay ? formatTime(series.fetchedAt) : formatDateTime(series.fetchedAt)} Uhr`);
   }
+  const bySource = new Map();
+  for (const s of activeSupplements(series, now)) bySource.set(s.source.id, [...(bySource.get(s.source.id) ?? []), s]);
+  for (const list of bySource.values()) {
+    const fetched = Math.max(...list.map((s) => s.fetchedAt));
+    parts.push(`ergänzt für ${joinList(list.map((s) => formatRange(s.from, s.until)))}: ${sourceLabel(list[0].source)}, abgerufen ${formatTime(fetched)} Uhr`);
+  }
   if (knownUntil) parts.push(`Preise bekannt bis ${formatKnownUntil(knownUntil)}`);
   if (series.deprecated) parts.push('Hinweis: Die Schnittstelle dieser Quelle ist als veraltet markiert');
   el.textContent = `${parts.join(' · ')}.`;
@@ -298,7 +345,7 @@ export function renderStatusMeta({ series, now, knownUntil }) {
 
 /** Nachricht nach erfolgreichem Laden (Fallback, Zwischenspeicher, Hinweis auf 13 Uhr). */
 export function statusAfterLoad({ series, attempts, now, knownUntil }) {
-  const failed = attempts.filter((a) => !a.ok && a.id !== 'snapshot').map((a) => a.id);
+  const failed = attempts.filter((a) => !a.ok && a.id !== 'snapshot' && a.role !== 'supplement').map((a) => a.id);
   const msgs = [];
   if (series.source.id === 'snapshot') {
     const when = formatDateTime(series.fetchedAt);
@@ -308,10 +355,9 @@ export function statusAfterLoad({ series, attempts, now, knownUntil }) {
     msgs.push(`${names.join(' und ')} ${names.length > 1 ? 'waren' : 'war'} nicht erreichbar – die Daten stammen von ${shortName(series.source.id)}.`);
   }
   if (knownUntil) {
-    const berlinHour = berlinParts(now).hour;
     const tomorrowKnown = berlinParts(knownUntil - 1).ymd > berlinParts(now).ymd;
-    if (!tomorrowKnown && berlinHour < 15) msgs.push('Die Preise für morgen erscheinen täglich gegen 13 Uhr.');
-    else if (!tomorrowKnown) msgs.push('Die Preise für morgen liegen in dieser Quelle noch nicht vor.');
+    if (!tomorrowKnown && knownUntil >= expectedCoverageEnd(now)) msgs.push('Die Preise für morgen erscheinen täglich gegen 13 Uhr.');
+    else if (!tomorrowKnown) msgs.push(`Die Preise für morgen sind noch nicht verfügbar – LadeRick prüft alle ${config.refreshMinutesAwaiting} Minuten erneut.`);
   }
   return msgs.join(' ');
 }

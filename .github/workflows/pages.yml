@@ -9,6 +9,9 @@ on:
     branches: [main, ccr-44d3aa6b-g7gd63]
   schedule:
     - cron: '17 * * * *'
+    # zusätzlich nachmittags (UTC 11–14 Uhr), wenn die Folgetagspreise erscheinen; GitHub führt geplante Läufe allerdings
+    # nur nach Kapazität aus, einzelne Läufe können ausfallen
+    - cron: '47 11-14 * * *'
   workflow_dispatch:
 
 permissions:

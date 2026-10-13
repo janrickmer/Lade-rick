@@ -5,8 +5,8 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { startServer, launchBrowser, mockSources, waitForRender, nowParam, REFERENCE_NOW, buildFixtureSet, ROOT } from './helpers.js';
-import { plantedPrice, syntheticPrice } from '../fixtures/generate.js';
-import { cheapestSlot, cheapestUpcomingSlot, cheapestStartTimeOfDay, normalizePoints, HOUR, MINUTE } from '../../src/analysis.js';
+import { plantedPrice, syntheticPrice, toAwattar, toSmardFile } from '../fixtures/generate.js';
+import { cheapestSlot, cheapestUpcomingSlot, cheapestStartTimeOfDay, normalizePoints, aggregateToResolution, HOUR, MINUTE } from '../../src/analysis.js';
 import { formatWindow, formatCt, berlinParts } from '../../src/format.js';
 import { config } from '../../src/config.js';
 
@@ -20,7 +20,11 @@ let passed = 0;
 
 const IGNORED_CONSOLE = /Failed to load resource|net::ERR_FAILED|status of (4|5)\d\d/;
 
+// Optional nur einzelne Szenarien: E2E_FILTER='Zwischenspeicher' npm run test:e2e
+const FILTER = process.env.E2E_FILTER ? new RegExp(process.env.E2E_FILTER) : null;
+
 async function scenario(name, fn, { viewport = { width: 1200, height: 900 }, colorScheme = 'light', storage = null, hasTouch = false } = {}) {
+  if (FILTER && !FILTER.test(name)) return;
   const ctx = await browser.newContext({ viewport, colorScheme, hasTouch, locale: 'de-DE', timezoneId: 'Europe/Berlin' });
   const page = await ctx.newPage();
   const consoleErrors = [];
@@ -58,6 +62,7 @@ await scenario('Standardfall: SMARD liefert, Hero/Ausblick/Kennzahlen/Chart/Tabe
   const r = await waitForRender(page);
   assert.equal(r.sourceId, 'smard');
   assert.equal(r.pointCount, base.points.length);
+  assert.equal(await page.locator('#chart-supplement').isHidden(), true, 'kein Ergänzungshinweis, wenn SMARD vollständig ist');
   assert.equal(r.slot.start, expected.slot.start);
   assert.equal(r.slot.end, expected.slot.end);
   assert.ok(Math.abs(r.slot.meanPrice - expected.slot.meanPrice) < 1e-9);
@@ -533,7 +538,7 @@ await scenario('Sprung der Systemuhr (z. B. nach Standby): Anzeige wird innerhal
 });
 
 await scenario('Unbrauchbarer Zwischenspeicher wird verworfen und die Seite lädt normal', async (page) => {
-  await mockSources(page, {});
+  await mockSources(page, { fixtures: buildFixtureSet({ now: Date.now() }) }); // Live-Uhr: Testdaten um „jetzt“ erzeugen
   await page.goto(`${srv.baseUrl}/`);
   const r = await waitForRender(page);
   assert.equal(r.sourceId, 'smard');
@@ -644,8 +649,9 @@ await scenario('Rückblick ohne ausreichende Daten zeigt einen Hinweis', async (
   const fixtures = buildFixtureSet({ now: REFERENCE_NOW });
   // nur die letzten 26 h behalten: jede Uhrzeit hat höchstens ein vollständiges Fenster
   const pts = fixtures.points.filter((p) => p.start >= REFERENCE_NOW - 26 * HOUR);
-  const { toEnergyCharts } = await import('../fixtures/generate.js');
-  await mockSources(page, { fixtures: { ...fixtures, energyCharts: toEnergyCharts(pts) }, smard: 'fail' });
+  const { toEnergyCharts, toAwattar } = await import('../fixtures/generate.js');
+  // auch die Ergänzungsquelle (aWATTar) hat nur diese 26 h – sonst würden die Lücken korrekt aufgefüllt
+  await mockSources(page, { fixtures: { ...fixtures, energyCharts: toEnergyCharts(pts), awattar: toAwattar(pts) }, smard: 'fail' });
   await page.goto(url());
   const r = await waitForRender(page);
   assert.equal(r.sourceId, 'energy-charts');
@@ -693,6 +699,108 @@ await scenario('Direktaufruf mit #datenschutz öffnet den Abschnitt beim Laden',
   await page.waitForTimeout(100);
   const top = await page.locator('#datenschutz').evaluate((el) => el.getBoundingClientRect().top);
   assert.ok(top >= -2 && top < 200, `Abschnitt oben im Bild (top=${top})`);
+});
+
+
+// ---------- Ergänzen fehlender Preise (SMARD.de hinkt hinterher) ----------
+
+/** Fixtures, bei denen SMARD nur Punkte bis `smardUntil` hat; aWATTar liefert Stundenmittel aller Punkte. */
+function laggingSmard(set, smardUntil) {
+  const smardPoints = set.points.filter((p) => p.end <= smardUntil);
+  const smardFiles = Object.fromEntries(Object.keys(set.smardFiles).map((ws) => [ws, toSmardFile(smardPoints, Number(ws))]));
+  return { ...set, smardFiles, awattar: toAwattar(aggregateToResolution(set.points, 60)) };
+}
+
+await scenario('SMARD ohne Preise für morgen: aWATTar ergänzt, dezenter Hinweis unter dem Diagramm, Statuszeile nennt beide', async (page) => {
+  const todayEnd = Date.parse('2026-09-29T00:00:00+02:00');
+  const fixtures = laggingSmard(buildFixtureSet({ now: REFERENCE_NOW }), todayEnd);
+  const { log } = await mockSources(page, { fixtures });
+  await page.goto(url());
+  const r = await waitForRender(page);
+  assert.equal(r.sourceId, 'smard');
+  assert.equal(r.viewLabel, 'Gestern bis morgen', 'morgen ist dank Ergänzung sichtbar');
+  assert.ok(log.some((u) => u.includes('api.awattar.de')));
+  const sup = await page.evaluate(() => window.__LADERICK__.series.supplements);
+  assert.deepEqual(sup.map((s) => [s.source.id, s.from, s.until, s.resolutionMinutes]), [['awattar', todayEnd, Date.parse('2026-09-30T00:00:00+02:00'), 60]]);
+  const note = page.locator('#chart-supplement');
+  assert.equal(await note.isVisible(), true);
+  assert.equal(await text(page, '#chart-supplement'),
+    'Hinweis: Die Preise für Di., 29.09., 00:00 – 24:00 Uhr liegen bisher nur von der Drittanbieter-Quelle aWATTar vor (als Stundenwerte), '
+    + 'noch nicht von der Hauptquelle SMARD.de. Sobald SMARD.de sie veröffentlicht, werden sie automatisch übernommen.');
+  // leicht ausgegraut und kleiner als der Fließtext, direkt unter Diagramm und Legende
+  assert.equal(await note.evaluate((el) => getComputedStyle(el).color), 'rgb(111, 110, 104)');
+  assert.equal(await note.evaluate((el) => getComputedStyle(el).fontSize), '13px');
+  const [legendBox, noteBox] = await Promise.all([page.locator('#chart-legend').boundingBox(), note.boundingBox()]);
+  assert.ok(noteBox.y > legendBox.y, 'Hinweis steht unter der Legende');
+  assert.match(await text(page, '#status-meta'),
+    /^Daten: Bundesnetzagentur \| SMARD\.de \(CC BY 4\.0\) · abgerufen 14:00 Uhr · ergänzt für Di\., 29\.09\., 00:00 – 24:00 Uhr: aWATTar-API \(EPEX-SPOT-Day-Ahead-Preise\), abgerufen 14:00 Uhr · Preise bekannt bis Di\., 29\.09\., 24:00 Uhr\.$/);
+  assert.equal(await text(page, '#status-msg'), '', 'keine Fehlermeldung wegen der Ergänzung');
+  assert.match(await text(page, '#chart-subtitle'), /15-Minuten-Werte, teils Stundenwerte$/);
+  // kommende Stunden aus aWATTar stehen in der Tabelle als Stundenzeilen
+  await page.locator('#table-summary').click();
+  assert.ok(await page.locator('#price-table tbody tr').filter({ hasText: 'Di., 29.09., 03:00 – 04:00 Uhr' }).count() === 1);
+});
+
+await scenario('Ohne Neuladen: ab 12:55 Uhr alle 5 Minuten nachfragen, Ergänzung übernehmen, später durch SMARD ersetzen', async (page) => {
+  const start = Date.parse('2026-09-28T12:50:00+02:00');
+  const todayEnd = Date.parse('2026-09-29T00:00:00+02:00');
+  const before = buildFixtureSet({ now: start }); // alle Quellen nur bis heute 24:00
+  const after = buildFixtureSet({ now: Date.parse('2026-09-28T13:30:00+02:00') }); // inkl. morgen
+  await page.clock.install({ time: start });
+  await mockSources(page, { fixtures: { ...before, awattar: toAwattar(aggregateToResolution(before.points, 60)) } });
+  await page.goto(`${srv.baseUrl}/`); // Live-Uhr (gesteuert)
+  await page.waitForFunction(() => Boolean(window.__LADERICK__?.series), null, { polling: 100 });
+  const state = () => page.evaluate(() => ({
+    end: window.__LADERICK__.series.points.at(-1).end,
+    sup: (window.__LADERICK__.series.supplements ?? []).map((s) => s.source.id),
+    next: window.__LADERICK__.nextLoadAt,
+    now: Date.now(),
+  }));
+  let st = await state();
+  assert.equal(st.end, todayEnd);
+  assert.equal(st.next, Date.parse('2026-09-28T12:55:00+02:00'), 'nächster Abruf zur Veröffentlichung, nicht erst in einer Stunde');
+  assert.match(await text(page, '#status-msg'), /Die Preise für morgen erscheinen täglich gegen 13 Uhr\./);
+
+  // 12:55: noch keine Quelle hat morgen → Hinweis, nächster Versuch in 5 Minuten
+  await page.clock.runFor(5 * MINUTE + 1000);
+  await page.waitForFunction((t) => window.__LADERICK__.nextLoadAt > t, Date.parse('2026-09-28T12:56:00+02:00'), { polling: 100 });
+  st = await state();
+  assert.equal(st.end, todayEnd);
+  assert.ok(Math.abs(st.next - (Date.parse('2026-09-28T12:55:00+02:00') + 5 * MINUTE)) < 2000, `nächster Abruf ≈ 13:00 (${new Date(st.next).toISOString()})`);
+  assert.match(await text(page, '#status-msg'), /Die Preise für morgen sind noch nicht verfügbar – LadeRick prüft alle 5 Minuten erneut\./);
+
+  // aWATTar veröffentlicht, SMARD noch nicht → beim nächsten Abruf ergänzt
+  await mockSources(page, { fixtures: laggingSmard(after, todayEnd) });
+  await page.clock.runFor(5 * MINUTE);
+  await page.waitForFunction(() => (window.__LADERICK__.series.supplements ?? []).length === 1, null, { polling: 100 });
+  st = await state();
+  assert.equal(st.end, Date.parse('2026-09-30T00:00:00+02:00'));
+  assert.deepEqual(st.sup, ['awattar']);
+  assert.equal(await page.locator('#chart-supplement').isVisible(), true);
+  assert.ok(Math.abs(st.next - (st.now + 30 * MINUTE)) < 5000, 'solange ergänzt: alle 30 Minuten');
+
+  // SMARD zieht nach → Ergänzung und Hinweis verschwinden
+  await mockSources(page, { fixtures: { ...after, awattar: toAwattar(aggregateToResolution(after.points, 60)) } });
+  await page.clock.runFor(30 * MINUTE + 1000);
+  await page.waitForFunction(() => !(window.__LADERICK__.series.supplements ?? []).length, null, { polling: 100 });
+  assert.equal(await page.locator('#chart-supplement').isHidden(), true);
+  st = await state();
+  assert.equal(st.end, Date.parse('2026-09-30T00:00:00+02:00'));
+  assert.ok(st.next - st.now > 55 * MINUTE, 'vollständig aus der Hauptquelle: wieder stündlich');
+});
+
+await scenario('Zwischenspeicher ohne Preise für morgen gilt nach 12:55 Uhr nicht als frisch', async (page) => {
+  const now = Date.parse('2026-09-28T13:10:00+02:00');
+  const todayEnd = Date.parse('2026-09-29T00:00:00+02:00');
+  const set = buildFixtureSet({ now: Date.parse('2026-09-28T12:00:00+02:00') }); // bis heute 24:00
+  await page.clock.install({ time: now });
+  await page.addInitScript(([series, savedAt]) => {
+    window.localStorage.setItem('laderick:cache:v1', JSON.stringify({ savedAt, attempts: [], series }));
+  }, [{ points: set.points, resolutionMinutes: 15, fetchedAt: now - 3 * MINUTE, source: { id: 'smard', name: 'SMARD.de (Bundesnetzagentur)', url: 'https://www.smard.de/', licence: 'CC BY 4.0', attribution: '', operator: 'Bundesnetzagentur' } }, now - 6 * MINUTE]);
+  const { log } = await mockSources(page, { fixtures: laggingSmard(buildFixtureSet({ now }), todayEnd) });
+  await page.goto(`${srv.baseUrl}/`);
+  await page.waitForFunction(() => (window.__LADERICK__?.series?.supplements ?? []).length === 1, null, { polling: 100 });
+  assert.ok(log.some((u) => u.includes('smard.de')), 'trotz 6 Minuten alter Kopie neu abgefragt');
 });
 
 // ---------------------------------------------------------------------------

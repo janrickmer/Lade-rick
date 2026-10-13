@@ -4,6 +4,7 @@
 
 import { config } from './config.js';
 import { HOUR, MINUTE, detectResolutionMinutes, floorToResolution, normalizePoints, weightedStats } from './analysis.js';
+import { berlinDayStart, berlinDayStartOffset, berlinOffsetMinutes } from './format.js';
 
 /** @typedef {import('./analysis.js').PricePoint} PricePoint */
 /** @typedef {{
@@ -12,8 +13,11 @@ import { HOUR, MINUTE, detectResolutionMinutes, floorToResolution, normalizePoin
  *   source: { id:string, name:string, url:string, licence:string, attribution:string, operator:string },
  *   fetchedAt: number,
  *   stale?: boolean,
- *   snapshotOf?: { id:string, name:string, url:string, licence:string, attribution:string, operator:string } | null
- * }} PriceSeries */
+ *   snapshotOf?: { id:string, name:string, url:string, licence:string, attribution:string, operator:string } | null,
+ *   supplements?: Array<{ source:{ id:string, name:string, url:string, licence:string, attribution:string, operator:string },
+ *                          from:number, until:number, resolutionMinutes:number, fetchedAt:number }>
+ * }} PriceSeries
+ * `supplements`: künftige Preise, die an die Daten der gewählten Quelle angehängt wurden, weil diese sie noch nicht hatte. */
 
 export class SourceError extends Error {
   /** @param {string} sourceId @param {string} message @param {{ cause?:unknown, status?:number, kind?:string }} [opts] */
@@ -87,7 +91,10 @@ export async function getJson(url, { fetchImpl = globalThis.fetch, timeoutMs = c
     if (controller.signal.aborted) throw new SourceError(sourceId, 'Anfrage abgebrochen', { kind: 'aborted' });
     let response;
     try {
-      response = await fetchImpl(url, { signal: controller.signal, headers: { Accept: 'application/json', ...(headers ?? {}) } });
+      // cache: 'no-cache' – der Browser darf eine gespeicherte Antwort nur nach Rückfrage beim Server verwenden. SMARD.de sendet
+      // keine Cache-Dauer, nur Last-Modified; ohne diese Option dürfte der Browser eine alte Datei heuristisch stundenlang
+      // wiederverwenden und neu veröffentlichte Preise übersehen.
+      response = await fetchImpl(url, { signal: controller.signal, cache: 'no-cache', headers: { Accept: 'application/json', ...(headers ?? {}) } });
     } catch (err) {
       if (controller.signal.aborted && controller.signal.reason?.message === 'timeout') {
         throw new SourceError(sourceId, `Zeitüberschreitung nach ${Math.round(timeoutMs / 1000)} s (${url})`, { cause: err, kind: 'timeout' });
@@ -281,7 +288,22 @@ export async function fetchSnapshot({ now, fetchImpl, timeoutMs, signal, url = '
   series.snapshotOf = orig && SOURCE_META[orig.id]
     ? (({ apiBase, ...meta }) => meta)(SOURCE_META[orig.id])
     : orig ? { id: String(orig.id ?? '?'), name: String(orig.name ?? '?'), url: String(orig.url ?? ''), licence: String(orig.licence ?? ''), attribution: String(orig.attribution ?? ''), operator: String(orig.operator ?? '') } : null;
+  const supplements = Array.isArray(json.supplements) ? json.supplements.map(sanitizeSupplement).filter(Boolean) : [];
+  if (supplements.length) series.supplements = supplements;
   return series;
+}
+
+/** Ergänzungs-Eintrag aus einem Snapshot prüfen; Quellenangaben nur aus SOURCE_META (keine Fremdtexte übernehmen). */
+function sanitizeSupplement(entry) {
+  if (!entry || typeof entry !== 'object') return null;
+  const meta = SOURCE_META[entry.source?.id];
+  const from = Number(entry.from);
+  const until = Number(entry.until);
+  if (!meta || meta.id === 'snapshot' || !Number.isFinite(from) || !Number.isFinite(until) || until <= from) return null;
+  const { apiBase, ...source } = meta;
+  const res = Number(entry.resolutionMinutes);
+  const fetchedAt = Number(entry.fetchedAt);
+  return { source, from, until, resolutionMinutes: Number.isFinite(res) && res > 0 ? res : 60, fetchedAt: Number.isFinite(fetchedAt) ? fetchedAt : until };
 }
 
 export const ADAPTERS = Object.freeze({
@@ -303,33 +325,167 @@ export function acceptSeries(series, { now, lookbackHours = config.lookbackHours
   return { ok: coveredHours + 1e-9 >= minAcceptedHours, coveredHours };
 }
 
+// ---------- Ergänzen fehlender Preise aus weiteren Quellen ----------
+
+/** Ende des letzten Punkts einer Reihe (−∞ ohne Punkte). */
+export function seriesEnd(series) {
+  const pts = series?.points;
+  return pts?.length ? pts[pts.length - 1].end : -Infinity;
+}
+
 /**
- * Fallback-Kette: probiert die Quellen in `order`, bis eine erreichbar ist und genug Daten liefert.
- * Wirft nie; bei Totalausfall ist `series` null und `attempts` beschreibt jeden Versuch.
- * @param {{ now:number, fetchImpl?:typeof fetch, order?:string[], timeoutMs?:number, signal?:AbortSignal,
- *           adapters?:Record<string,Function>, onAttempt?:(a:object)=>void, minAcceptedHours?:number, snapshotUrl?:string }} opts
- * @returns {Promise<{ series: PriceSeries|null, attempts: Array<{ id:string, ok:boolean, ms:number, error?:string, kind?:string, coveredHours?:number }> }>}
+ * Zeitpunkt, ab dem an diesem Berliner Kalendertag die Folgetagspreise erwartet werden (Standard 12:55 Uhr) –
+ * korrekt auch an Tagen mit Zeitumstellung.
  */
-export async function fetchPrices({ now = Date.now(), fetchImpl, order = config.sourceOrder, timeoutMs, signal, adapters = ADAPTERS, onAttempt, minAcceptedHours, snapshotUrl } = {}) {
+export function nextDayPublicationTime(now, at = config.nextDayExpectedAt) {
+  const dayStart = berlinDayStart(now);
+  const naive = dayStart + (at.hour * 60 + at.minute) * MINUTE;
+  return naive - (berlinOffsetMinutes(naive) - berlinOffsetMinutes(dayStart)) * MINUTE;
+}
+
+/**
+ * Bis wann Preise zu diesem Zeitpunkt veröffentlicht sein sollten: ab der Veröffentlichungszeit bis Ende morgen,
+ * davor bis Ende heute (jeweils 24:00 Uhr Europe/Berlin).
+ */
+export function expectedCoverageEnd(now, at = config.nextDayExpectedAt) {
+  return berlinDayStartOffset(now, now >= nextDayPublicationTime(now, at) ? 2 : 1);
+}
+
+/**
+ * Lücken von mindestens `minGapMs` in der Abdeckung [from, to) einer sortierten, überlappungsfreien Punktliste
+ * (to darf Infinity sein: dann zählt alles nach dem letzten Punkt als Lücke).
+ * @returns {Array<[number, number]>}
+ */
+export function coverageGaps(points, from, to, { minGapMs = HOUR } = {}) {
+  const gaps = [];
+  let cursor = from;
+  for (const p of points) {
+    if (cursor >= to || p.start >= to) break;
+    if (p.end <= cursor) continue;
+    if (p.start > cursor) gaps.push([cursor, p.start]);
+    cursor = p.end;
+  }
+  if (cursor < to) gaps.push([cursor, to]);
+  return gaps.filter(([a, b]) => b - a >= minGapMs);
+}
+
+/**
+ * Zeitraum, für den zu diesem Zeitpunkt lückenlos Preise vorliegen sollten: vom Beginn des Analysezeitraums
+ * (72 h zurück) bis zum Ende der erwartungsgemäß veröffentlichten Preise (siehe expectedCoverageEnd).
+ */
+export function expectedRange(now, cfg = config) {
+  return { from: floorToResolution(now - cfg.lookbackHours * HOUR, 60), to: expectedCoverageEnd(now, cfg.nextDayExpectedAt) };
+}
+
+/**
+ * Füllt Lücken der Reihe (≥ 1 h, auch nach ihrem Ende) mit Punkten einer zweiten Quelle, die vollständig in eine
+ * Lücke passen. Vorhandene Werte werden nie ersetzt oder gemischt. Jeder zusammenhängende ergänzte Zeitraum wird in
+ * `supplements` vermerkt. null, wenn nichts hinzukäme.
+ * @param {PriceSeries} primary @param {PriceSeries} extra
+ * @param {{ from?:number, minGapMs?:number }} [opts] from: früheste zu füllende Zeit (Standard: Beginn der Reihe)
+ * @returns {PriceSeries|null}
+ */
+export function mergeSupplement(primary, extra, { from = primary.points[0]?.start ?? -Infinity, minGapMs = HOUR } = {}) {
+  const gaps = coverageGaps(primary.points, from, Infinity, { minGapMs });
+  const added = extra.points.filter((p) => gaps.some(([a, b]) => p.start >= a && p.end <= b));
+  if (!added.length) return null;
+  const ranges = [];
+  for (const p of added) {
+    const last = ranges[ranges.length - 1];
+    if (last && p.start === last.until) { last.until = p.end; last.points.push(p); } else ranges.push({ from: p.start, until: p.end, points: [p] });
+  }
+  const entries = ranges.map((r) => ({
+    source: extra.source, from: r.from, until: r.until, resolutionMinutes: detectResolutionMinutes(r.points), fetchedAt: extra.fetchedAt,
+  }));
+  const points = [...primary.points, ...added].sort((x, y) => x.start - y.start);
+  return { ...primary, points, supplements: [...(primary.supplements ?? []), ...entries] };
+}
+
+/**
+ * Nächster planmäßiger Abruf (Epoch-ms) nach einem Abruf zum Zeitpunkt `lastFetchAt`:
+ * - fehlen Preise von heute oder (ab 12:55 Uhr) von morgen → nach `refreshMinutesAwaiting`,
+ * - stammen Preise im Analysezeitraum nur aus einer ergänzenden Quelle → nach `refreshMinutesSupplemented`,
+ * - sonst nach `refreshMinutes`, aber nicht später als zur erwarteten Veröffentlichung der Folgetagspreise.
+ * @param {PriceSeries|null} series @param {number} lastFetchAt @param {number} now
+ */
+export function nextRefreshAt(series, lastFetchAt, now, cfg = config) {
+  const points = series?.points ?? [];
+  if (coverageGaps(points, berlinDayStart(now), expectedCoverageEnd(now, cfg.nextDayExpectedAt)).length) {
+    return lastFetchAt + cfg.refreshMinutesAwaiting * MINUTE;
+  }
+  if (series?.supplements?.some((s) => s.until > now - cfg.lookbackHours * HOUR)) return lastFetchAt + cfg.refreshMinutesSupplemented * MINUTE;
+  let next = lastFetchAt + cfg.refreshMinutes * MINUTE;
+  const publication = nextDayPublicationTime(now, cfg.nextDayExpectedAt);
+  if (seriesEnd(series) < berlinDayStartOffset(now, 2) && publication > lastFetchAt) next = Math.min(next, publication);
+  return next;
+}
+
+/**
+ * Fallback-Kette: probiert die Quellen in `order`, bis eine erreichbar ist und genug Daten liefert. Fehlen der gewählten
+ * Quelle danach Preise, die schon veröffentlicht sein müssten (siehe expectedRange), werden die Lücken aus den Quellen in
+ * `supplementOrder` gefüllt (Versuche mit role: 'supplement'). In diesem Lauf bereits gescheiterte Quellen werden dabei
+ * nicht erneut abgefragt.
+ * Wirft nie; bei Totalausfall ist `series` null und `attempts` beschreibt jeden Versuch.
+ * @param {{ now:number, fetchImpl?:typeof fetch, order?:string[], supplementOrder?:string[], timeoutMs?:number, signal?:AbortSignal,
+ *           adapters?:Record<string,Function>, onAttempt?:(a:object)=>void, minAcceptedHours?:number, snapshotUrl?:string }} opts
+ * @returns {Promise<{ series: PriceSeries|null, attempts: Array<{ id:string, ok:boolean, ms:number, role?:'supplement', error?:string, kind?:string, coveredHours?:number, addedHours?:number }> }>}
+ */
+export async function fetchPrices({ now = Date.now(), fetchImpl, order = config.sourceOrder, supplementOrder = config.supplementOrder, timeoutMs, signal, adapters = ADAPTERS, onAttempt, minAcceptedHours, snapshotUrl } = {}) {
   const attempts = [];
+  const fetched = new Map(); // in diesem Lauf geladene Reihen (auch abgelehnte), für das Ergänzen wiederverwendbar
+  let series = null;
   for (const id of order) {
     const adapter = adapters[id];
     if (!adapter) { attempts.push({ id, ok: false, ms: 0, error: 'Unbekannte Quelle', kind: 'config' }); continue; }
     const t0 = Date.now();
     try {
-      const series = await adapter({ now, fetchImpl, timeoutMs, signal, ...(id === 'snapshot' && snapshotUrl ? { url: snapshotUrl } : {}) });
-      const { ok, coveredHours } = acceptSeries(series, { now, minAcceptedHours: id === 'snapshot' ? Math.min(minAcceptedHours ?? config.minAcceptedHours, 4) : minAcceptedHours });
+      const candidate = await adapter({ now, fetchImpl, timeoutMs, signal, ...(id === 'snapshot' && snapshotUrl ? { url: snapshotUrl } : {}) });
+      fetched.set(id, candidate);
+      const { ok, coveredHours } = acceptSeries(candidate, { now, minAcceptedHours: id === 'snapshot' ? Math.min(minAcceptedHours ?? config.minAcceptedHours, 4) : minAcceptedHours });
       const attempt = { id, ok, ms: Date.now() - t0, coveredHours };
       if (!ok) { attempt.error = `Zu wenig Daten im Analysezeitraum (${coveredHours.toFixed(1)} h)`; attempt.kind = 'insufficient'; }
       attempts.push(attempt);
       onAttempt?.(attempt);
-      if (ok) return { series, attempts };
+      if (ok) { series = candidate; break; }
     } catch (err) {
       const attempt = { id, ok: false, ms: Date.now() - t0, error: String(err?.message ?? err), kind: err?.kind ?? 'unknown' };
       attempts.push(attempt);
       onAttempt?.(attempt);
-      if (attempt.kind === 'aborted') break;
+      if (attempt.kind === 'aborted') return { series: null, attempts };
     }
   }
-  return { series: null, attempts };
+  if (!series) return { series: null, attempts };
+
+  // Fehlen Preise, die schon veröffentlicht sein müssten (Lücken ≥ 1 h im Analysezeitraum oder – ab 12:55 Uhr – die
+  // Preise für morgen), aus weiteren Quellen ergänzen. Typisch: SMARD.de trägt die Folgetagspreise Stunden später nach.
+  const range = expectedRange(now);
+  const failed = new Set(attempts.filter((a) => !a.ok && a.kind !== 'insufficient').map((a) => a.id));
+  for (const id of supplementOrder ?? []) {
+    if (!coverageGaps(series.points, range.from, range.to).length) break;
+    if (id === series.source.id || id === 'snapshot' || failed.has(id) || !adapters[id]) continue;
+    const t0 = Date.now();
+    let extra = fetched.get(id);
+    try {
+      if (!extra) extra = await adapters[id]({ now, fetchImpl, timeoutMs, signal });
+    } catch (err) {
+      const attempt = { id, role: 'supplement', ok: false, ms: Date.now() - t0, error: String(err?.message ?? err), kind: err?.kind ?? 'unknown' };
+      attempts.push(attempt);
+      onAttempt?.(attempt);
+      if (attempt.kind === 'aborted') break;
+      continue;
+    }
+    const merged = mergeSupplement(series, extra, { from: range.from });
+    const attempt = { id, role: 'supplement', ok: Boolean(merged), ms: Date.now() - t0 };
+    if (merged) {
+      const before = series.supplements?.length ?? 0;
+      attempt.addedHours = merged.supplements.slice(before).reduce((sum, e) => sum + (e.until - e.from), 0) / HOUR;
+      series = merged;
+    } else {
+      attempt.kind = 'no-new-data';
+      attempt.error = 'Keine zusätzlichen Preise';
+    }
+    attempts.push(attempt);
+    onAttempt?.(attempt);
+  }
+  return { series, attempts };
 }
