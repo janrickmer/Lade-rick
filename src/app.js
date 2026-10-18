@@ -52,12 +52,15 @@ function setDaysChoice(days) {
   if (!config.chartDaysOptions.includes(days)) return;
   state.viewDays = days;
   try { window.localStorage.setItem(DAYS_KEY, String(days)); } catch { /* ignorieren */ }
+  syncRangePicker();
   if (state.series) render({ fromCache: true });
 }
 
 function syncRangePicker() {
   const input = document.querySelector(`#range-picker input[value="${state.viewDays}"]`);
   if (input) input.checked = true;
+  const seg = document.querySelector('#range-picker .segmented');
+  if (seg) seg.dataset.active = String(state.viewDays); // Position der gleitenden Markierung
 }
 
 
@@ -321,17 +324,24 @@ function revealTarget(hash, { scroll = false } = {}) {
 
 // ---------- Bewegung ----------
 
-/** Abschnitte unterhalb des ersten Bildschirms erscheinen einmal beim Hineinscrollen; ohne Observer sofort. */
+/**
+ * Die Teile des Erklär- und Rechtsteils (Überschriften, Absätze, aufklappbare Abschnitte) erscheinen einmal beim
+ * Hineinscrollen, gestaffelt in Lesereihenfolge; ohne Observer sofort.
+ */
 function setupReveal() {
-  const items = [...document.querySelectorAll('.reveal-scroll')];
+  const items = [...document.querySelectorAll('.article > *, .legal > *')];
+  for (const el of items) el.classList.add('reveal-scroll');
   if (typeof IntersectionObserver !== 'function') { for (const el of items) el.classList.add('is-visible'); return; }
   const io = new IntersectionObserver((entries) => {
+    let i = 0;
     for (const entry of entries) {
       if (!entry.isIntersecting) continue;
+      entry.target.style.transitionDelay = `${Math.min(i, 4) * 70}ms`;
       entry.target.classList.add('is-visible');
       io.unobserve(entry.target);
+      i += 1;
     }
-  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.01 });
+  }, { rootMargin: '0px 0px -6% 0px', threshold: 0.01 });
   for (const el of items) io.observe(el);
   window.addEventListener('beforeprint', () => { for (const el of items) el.classList.add('is-visible'); });
 }
