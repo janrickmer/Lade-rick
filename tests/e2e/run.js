@@ -73,19 +73,21 @@ await scenario('Standardfall: SMARD liefert, Hero/Ausblick/Kennzahlen/Chart/Tabe
   assert.equal(await text(page, '#hero [data-field="ct"]'), formatCt(expected.slot.meanPrice).replace(/\s+/g, ' '));
   assert.match(await text(page, '#hero [data-field="compare"]'), /günstiger als der Durchschnitt der letzten 72 h/);
   assert.match(await text(page, '#hero [data-field="range"]'), /Analysiert: .* \(72 h\)\./);
-  // Diagramm steht ganz oben, vor der Hero-Karte
-  // Reihenfolge: Preisverlauf → Kommend (orange) → Vergangen → Kennzahlen
-  const ys = await Promise.all(['#chart-card', '#outlook', '#hero', '#kpi-min'].map(async (sel) => (await page.locator(sel).boundingBox()).y));
-  for (let i = 1; i < ys.length; i += 1) assert.ok(ys[i - 1] < ys[i], `Reihenfolge verletzt an Position ${i}: ${ys.join(' / ')}`);
+  // Reihenfolge (Desktop): Antwort (orange) mit den Kennzahlen daneben → Preisverlauf → Vergangen
+  const box = async (sel) => page.locator(sel).boundingBox();
+  const [bOutlook, bKpi, bChart, bHero] = await Promise.all(['#outlook', '#kpi-min', '#chart-card', '#hero'].map(box));
+  assert.ok(bOutlook.y < bChart.y && bChart.y < bHero.y, `Reihenfolge: ${[bOutlook.y, bChart.y, bHero.y].join(' / ')}`);
+  assert.ok(bKpi.y < bChart.y && bKpi.x > bOutlook.x + bOutlook.width - 1, 'Kennzahlen stehen neben der Antwort');
   assert.equal(await page.locator('#range-3').isChecked(), true);
   assert.equal(await text(page, '#chart-subtitle'), 'Gestern bis morgen · So., 27.09., 00:00 – Di., 29.09., 24:00 Uhr · 15-Minuten-Werte');
-  assert.equal(await text(page, '#range-hint'), 'Gestern bis morgen: So., 27.09., 00:00 – Di., 29.09., 24:00 Uhr.');
+  assert.equal(await page.locator('#range-hint').isHidden(), true, 'kein Hinweis, wenn die Preise für morgen bekannt sind');
   assert.equal(await page.locator('#hero [data-field="empty"]').isHidden(), true);
   assert.equal(await page.locator('#hero').getAttribute('data-state'), 'ready');
 
   const uw = formatWindow(expectedUpcoming.start, expectedUpcoming.end, { now: REFERENCE_NOW });
   assert.equal(await text(page, '#outlook [data-field="time"]'), uw.main.replace(/\s+/g, ' '));
-  assert.match(await text(page, '#outlook [data-field="pill"]'), /^Kommend · bekannt bis Di\., 29\.09\., 24:00 Uhr$/);
+  assert.equal(await text(page, '#outlook [data-field="headline"]'), 'Am günstigsten laden Sie morgen, Di., 29.09.');
+  assert.equal(await text(page, '#outlook [data-field="known"]'), 'Bekannte Preise bis Di., 29.09., 24:00 Uhr.');
   assert.match(await text(page, '#outlook [data-field="starts"]'), /^Beginnt in /);
 
   assert.match(await text(page, '#kpi-current [data-field="label"]'), /^Jetzt \(14:00 – 14:15 Uhr\)$/);
@@ -101,14 +103,18 @@ await scenario('Standardfall: SMARD liefert, Hero/Ausblick/Kennzahlen/Chart/Tabe
   // Chart
   assert.equal(await page.locator('#chart svg[role="img"]').count(), 1);
   assert.ok((await page.locator('#chart svg path.line').count()) >= 1);
-  // Grün markiert ist nur das günstigste kommende Fenster – rechts der „Jetzt“-Linie
+  // Orange markiert ist nur das günstigste kommende Fenster – rechts der „Jetzt“-Linie
   assert.equal(await page.locator('#chart svg .band-cheapest').count(), 1);
   assert.equal(await page.locator('#chart svg .outlook-box').count(), 0);
   assert.equal(await page.locator('#chart svg .now-line').count(), 1);
   const bandX = Number(await page.locator('#chart svg .band-cheapest').getAttribute('x'));
   const nowX = Number(await page.locator('#chart svg .now-line').getAttribute('x1'));
-  assert.ok(bandX >= nowX, `grünes Band (x=${bandX}) liegt vor der Jetzt-Linie (x=${nowX})`);
-  assert.equal(await page.locator('#chart svg .region-future').count(), 1);
+  assert.ok(bandX >= nowX, `oranges Band (x=${bandX}) liegt vor der Jetzt-Linie (x=${nowX})`);
+  // Vergangenheit als Tonfläche links von „jetzt“, Kurve dort grau, danach in Textfarbe; Punkt auf der Kurve bei „jetzt“
+  assert.equal(await page.locator('#chart svg .region-past').count(), 1);
+  assert.ok((await page.locator('#chart svg path.line-past').count()) >= 1);
+  assert.equal(await page.locator('#chart svg .now-dot').count(), 1);
+  assert.equal(await page.locator('#chart svg .band-cheapest').evaluate((el) => getComputedStyle(el).fill), 'rgb(240, 138, 46)');
   assert.match(await text(page, '#chart svg desc'), /Günstigstes kommendes 4-Stunden-Fenster/);
   assert.equal(await text(page, '#chart-legend'), 'Vergangene Preise Kommende Preise (bereits bekannt) Günstigstes kommendes 4-h-Fenster');
   assert.match(await text(page, '#chart-subtitle'), /15-Minuten-Werte$/);
@@ -345,19 +351,19 @@ await scenario('Dunkles Design: folgt der Systemeinstellung, Umschalter speicher
   await page.goto(url());
   await waitForRender(page);
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-theme')), null);
-  assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(13, 13, 13)');
+  assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(15, 16, 18)');
   assert.equal(await page.locator('#theme-toggle').getAttribute('aria-pressed'), 'true');
   assert.equal(await text(page, '#theme-toggle'), 'Dunkles Design');
   assert.equal(await page.evaluate(() => localStorage.getItem('laderick:theme')), null);
   // Orange Karte bleibt im dunklen Design orange mit dunkler, gut lesbarer Schrift
   assert.equal(await page.locator('#outlook').evaluate((el) => getComputedStyle(el).backgroundColor), 'rgb(240, 138, 46)');
-  for (const sel of ['#outlook .hero-time', '#outlook .card-title', '#outlook .pill', '#startzeit > summary h3']) {
+  for (const sel of ['#outlook .answer-time', '#outlook .answer-title', '#outlook .answer-ct', '#startzeit > summary h3']) {
     assert.equal(await page.locator(sel).evaluate((el) => getComputedStyle(el).color), 'rgb(11, 11, 11)', sel);
   }
   await page.screenshot({ path: resolve(SHOTS, 'desktop-dark.png'), fullPage: true });
   await page.locator('#theme-toggle').click();
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-theme')), 'light');
-  assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(249, 249, 247)');
+  assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(241, 242, 244)');
   assert.equal(await page.evaluate(() => localStorage.getItem('laderick:theme')), 'light');
   assert.equal(await page.locator('#theme-toggle').getAttribute('aria-pressed'), 'false');
 }, { colorScheme: 'dark' });
@@ -366,7 +372,7 @@ await scenario('Gespeichertes dunkles Design wird vor dem ersten Rendern gesetzt
   await mockSources(page, {});
   await page.goto(url());
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-theme')), 'dark');
-  assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(13, 13, 13)');
+  assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(15, 16, 18)');
   await waitForRender(page);
 }, { colorScheme: 'light', storage: { 'laderick:theme': 'dark' } });
 
@@ -391,12 +397,12 @@ await scenario('Zeitumstellung 25.10.2026: Fenster über die doppelte Stunde wir
   assert.equal(await text(page, '#hero [data-field="time"]'), '01:00 MESZ – 04:00 MEZ');
   assert.equal(await page.locator('#hero [data-field="time"]').getAttribute('data-dst'), 'true');
   assert.equal(await text(page, '#hero [data-field="note"]'), 'Fenster über die Zeitumstellung: 4 h, Zeitumstellung.');
-  // Tabelle: Zeitangaben in der doppelten Stunde eindeutig; grün markiert sind nur kommende Zeilen
+  // Tabelle: Zeitangaben in der doppelten Stunde eindeutig; orange markiert sind nur kommende Zeilen
   const rows = await page.locator('#price-table tbody tr td:first-child').allTextContents();
   assert.ok(rows.some((r) => /02:45\s*–\s*03:00\s*Uhr \(MESZ\)/.test(r)), 'Zeile 02:45–03:00 (MESZ) fehlt');
   const cheapRowStarts = await page.locator('#price-table tbody tr.row-cheapest time').evaluateAll((els) => els.map((e) => Date.parse(e.dateTime)));
   assert.equal(cheapRowStarts.length, 16);
-  assert.ok(cheapRowStarts.every((t) => t >= now), 'keine vergangene Zeile grün markiert');
+  assert.ok(cheapRowStarts.every((t) => t >= now), 'keine vergangene Zeile orange markiert');
   const [sw, iw] = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
   assert.equal(sw, iw, 'kein horizontaler Überlauf mit Zeitumstellungs-Fenster');
 }, { viewport: { width: 360, height: 780 } });
@@ -491,9 +497,9 @@ await scenario('Bereits begonnenes günstiges Fenster wird nicht gezeigt – fr�
   assert.equal(await text(page, '#outlook [data-field="starts"]'), 'Beginnt in 8 Minuten.');
   const bandX = Number(await page.locator('#chart svg .band-cheapest').getAttribute('x'));
   const nowX = Number(await page.locator('#chart svg .now-line').getAttribute('x1'));
-  assert.ok(bandX >= nowX, `grünes Band (x=${bandX}) beginnt vor der Jetzt-Linie (x=${nowX})`);
+  assert.ok(bandX >= nowX, `oranges Band (x=${bandX}) beginnt vor der Jetzt-Linie (x=${nowX})`);
   const cheapRowStarts = await page.locator('#price-table tbody tr.row-cheapest time').evaluateAll((els) => els.map((e) => Date.parse(e.dateTime)));
-  assert.ok(cheapRowStarts.length > 0 && cheapRowStarts.every((t) => t >= now), 'keine begonnene Zeile grün markiert');
+  assert.ok(cheapRowStarts.length > 0 && cheapRowStarts.every((t) => t >= now), 'keine begonnene Zeile orange markiert');
 });
 
 await scenario('Viertelstundengrenze: ein beginnendes Fenster wird schon kurz vor seinem Start ersetzt', async (page) => {
@@ -534,7 +540,7 @@ await scenario('Sprung der Systemuhr (z. B. nach Standby): Anzeige wird innerhal
   assert.equal(r.start, cheapStart + 15 * MINUTE, 'begonnenes Fenster wird nicht mehr gezeigt');
   const bandX = Number(await page.locator('#chart svg .band-cheapest').getAttribute('x'));
   const nowX = Number(await page.locator('#chart svg .now-line').getAttribute('x1'));
-  assert.ok(bandX >= nowX, `grünes Band (x=${bandX}) beginnt vor der Jetzt-Linie (x=${nowX})`);
+  assert.ok(bandX >= nowX, `oranges Band (x=${bandX}) beginnt vor der Jetzt-Linie (x=${nowX})`);
 });
 
 await scenario('Unbrauchbarer Zwischenspeicher wird verworfen und die Seite lädt normal', async (page) => {
@@ -574,7 +580,7 @@ await scenario('Zeitraum-Umschalter in Kalendertagen: 1/2/3 Tage, Auswahl wird g
   assert.equal(await page.locator('#price-table tbody tr').count(), 96);
   assert.equal(await page.locator('#chart svg .now-line').count(), 1);
   assert.equal(await page.locator('#chart svg .band-cheapest').count(), 0, 'kommendes Fenster liegt morgen, außerhalb der Tagesansicht');
-  assert.equal(await page.locator('#legend-cheapest').isHidden(), true, 'Legende ohne grünes Band ausgeblendet');
+  assert.equal(await page.locator('#legend-cheapest').isHidden(), true, 'Legende ohne oranges Band ausgeblendet');
   assert.equal(await page.evaluate(() => localStorage.getItem('laderick:days')), '1');
 
   await page.locator('label[for="range-2"]').click();
@@ -631,7 +637,7 @@ await scenario('Orange Karte „Kommend“ mit aufklappbarem Rückblick „Beste
   assert.equal(await page.locator('#start-time').count(), 0);
   // Karte „Kommend“ ist orange mit dunkler Schrift
   assert.equal(await page.locator('#outlook').evaluate((el) => getComputedStyle(el).backgroundColor), 'rgb(240, 138, 46)');
-  assert.equal(await page.locator('#outlook .hero-time').evaluate((el) => getComputedStyle(el).color), 'rgb(11, 11, 11)');
+  assert.equal(await page.locator('#outlook .answer-time').evaluate((el) => getComputedStyle(el).color), 'rgb(11, 11, 11)');
   // Rückblick ist eingeklappt, Überschrift sichtbar
   assert.equal(await page.locator('#outlook #startzeit').evaluate((d) => d.tagName === 'DETAILS' && !d.open), true);
   assert.equal(await text(page, '#startzeit > summary'), 'Beste Ladezeit der letzten Tage');
@@ -640,8 +646,8 @@ await scenario('Orange Karte „Kommend“ mit aufklappbarem Rückblick „Beste
   assert.equal(await page.locator('#startzeit [data-field="st-text"]').isVisible(), true);
   assert.equal(await text(page, '#startzeit [data-field="st-text"]'), expectedStartText(exp.best));
   assert.equal(await text(page, '#startzeit strong'), `${exp.best.key} Uhr`);
-  // Reihenfolge: Diagramm → Kommend (orange) → Vergangen
-  const ys = await Promise.all(['#chart-card', '#outlook', '#hero'].map(async (sel) => (await page.locator(sel).boundingBox()).y));
+  // Reihenfolge: Kommend (orange) → Diagramm → Vergangen
+  const ys = await Promise.all(['#outlook', '#chart-card', '#hero'].map(async (sel) => (await page.locator(sel).boundingBox()).y));
   assert.ok(ys[0] < ys[1] && ys[1] < ys[2], `Reihenfolge: ${ys.join(' / ')}`);
 });
 
@@ -728,7 +734,7 @@ await scenario('SMARD ohne Preise für morgen: aWATTar ergänzt, dezenter Hinwei
     'Hinweis: Die Preise für Di., 29.09., 00:00 – 24:00 Uhr liegen bisher nur von der Drittanbieter-Quelle aWATTar vor (als Stundenwerte), '
     + 'noch nicht von der Hauptquelle SMARD.de. Sobald SMARD.de sie veröffentlicht, werden sie automatisch übernommen.');
   // leicht ausgegraut und kleiner als der Fließtext, direkt unter Diagramm und Legende
-  assert.equal(await note.evaluate((el) => getComputedStyle(el).color), 'rgb(111, 110, 104)');
+  assert.equal(await note.evaluate((el) => getComputedStyle(el).color), 'rgb(100, 104, 114)');
   assert.equal(await note.evaluate((el) => getComputedStyle(el).fontSize), '13px');
   const [legendBox, noteBox] = await Promise.all([page.locator('#chart-legend').boundingBox(), note.boundingBox()]);
   assert.ok(noteBox.y > legendBox.y, 'Hinweis steht unter der Legende');

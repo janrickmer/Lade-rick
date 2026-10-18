@@ -2,6 +2,8 @@
 // (kein Aufblitzen). Standard: Systemeinstellung (prefers-color-scheme). In localStorage wird nur
 // dann etwas gespeichert, wenn die Darstellung bewusst umgeschaltet wurde – keine Nutzerdaten.
 (function () {
+  // Bewegungs-Ausgangszustände gelten nur mit Skript (ohne Skript bleibt alles sofort sichtbar)
+  document.documentElement.classList.add('js');
   try {
     var stored = window.localStorage.getItem('laderick:theme');
     if (stored === 'dark' || stored === 'light') {

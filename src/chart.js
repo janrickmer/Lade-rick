@@ -107,6 +107,7 @@ export class PriceChart {
     this.selected = -1;
     this.pinned = false;
     this.layout = null;
+    this.enterUntil = 0; // Zeitfenster der Eingangsbewegung beim ersten Zeichnen mit Daten
     this.tooltip = document.createElement('div');
     this.tooltip.className = 'chart-tooltip';
     this.tooltip.hidden = true;
@@ -197,11 +198,16 @@ export class PriceChart {
       width, height, viewBox: `0 0 ${width} ${height}`, role: 'img',
       'aria-labelledby': 'chart-title', 'aria-describedby': 'chart-desc',
     });
+    // Eingangsbewegung nur beim ersten Zeichnen mit Daten (spätere Neuberechnungen jede Minute bleiben ruhig)
+    const tNow = typeof performance !== 'undefined' ? performance.now() : 0;
+    if (!this.enterUntil) this.enterUntil = tNow + 1200;
+    if (tNow < this.enterUntil) svg.classList.add('is-entering');
     const desc = svgEl('desc', { id: 'chart-desc' }, svg);
     desc.textContent = this.describe(visible, xMin, xMax);
 
     const gRegions = svgEl('g', { 'aria-hidden': 'true' }, svg);
     const gGrid = svgEl('g', { 'aria-hidden': 'true' }, svg);
+    const gBand = svgEl('g', { 'aria-hidden': 'true' }, svg); // Fensterband über dem Gitter, unter der Kurve
     const gData = svgEl('g', { 'aria-hidden': 'true' }, svg);
     const gAnno = svgEl('g', { 'aria-hidden': 'true' }, svg);
     const gAxis = svgEl('g', { 'aria-hidden': 'true' }, svg);
@@ -209,22 +215,25 @@ export class PriceChart {
     gHover.setAttribute('visibility', 'hidden');
     this.hoverLayer = gHover;
 
-    // Bereich der kommenden (bereits bekannten) Preise
+    // Vergangenheit als leichte Tonfläche (keine Linie): links von „jetzt“
+    const pastEnd = Math.min(Math.max(now, xMin), xMax);
+    if (pastEnd > xMin) {
+      svgEl('rect', { class: 'region-past', x: x(xMin), y: MARGIN.top, width: x(pastEnd) - x(xMin), height: plotH }, gRegions);
+    }
     const futureStart = Math.max(xMin, nowFloor + res * MINUTE);
-    if (lastEnd > futureStart) {
-      svgEl('rect', { class: 'region-future', x: x(futureStart), y: MARGIN.top, width: x(Math.min(lastEnd, xMax)) - x(futureStart), height: plotH }, gRegions);
-      if (x(Math.min(lastEnd, xMax)) - x(futureStart) > 70) text(gRegions, x(futureStart) + 6, MARGIN.top + 14, 'kommend', 'region-label');
+    if (x(Math.min(lastEnd, xMax)) - x(Math.max(futureStart, now)) > 70) {
+      text(gRegions, x(Math.max(futureStart, now)) + 8, MARGIN.top + 14, 'kommend', 'region-label');
     }
 
-    // Grünes Band für das günstigste kommende Fenster
+    // Oranges Band für das günstigste kommende Fenster (dieselbe Farbe wie die Antwortfläche)
     if (cheapest && cheapest.end > xMin && cheapest.start < xMax) {
       // Linke Kante nie vor der (auf Pixel gerundeten) Jetzt-Linie – das Fenster beginnt nach „jetzt“
       const nowLineX = now >= xMin && now <= xMax ? Math.round(x(now)) + 0.5 : -Infinity;
       const bx = Math.max(x(Math.max(cheapest.start, xMin)), nowLineX);
       const bw = Math.max(0, x(Math.min(cheapest.end, xMax)) - bx);
-      svgEl('rect', { class: 'band-cheapest', x: bx, y: MARGIN.top, width: bw, height: plotH }, gRegions);
+      svgEl('rect', { class: 'band-cheapest', x: bx, y: MARGIN.top, width: bw, height: plotH }, gBand);
       const label = bw >= 130 ? 'günstigstes 4-h-Fenster' : bw >= 44 ? 'günstig' : null;
-      if (label) text(gRegions, bx + 6, MARGIN.top + plotH - 8, label, 'band-label');
+      if (label) text(gBand, bx + 6, MARGIN.top + plotH - 8, label, 'band-label');
     }
 
     // Gitter + y-Achse
@@ -248,10 +257,18 @@ export class PriceChart {
     }
     if (seg.length) segments.push(seg);
     const y0 = y(0);
+    // Vergangenheit grau, Zukunft in voller Textfarbe mit leichter Fläche; Wechsel genau bei „jetzt“
+    const split = Math.min(Math.max(now, xMin), xMax);
     for (const s of segments) {
-      const d = this.stepPath(s, x, y, xMin, xMax);
-      svgEl('path', { class: 'area', d: `${d} V ${y0.toFixed(1)} H ${x(Math.max(s[0].start, xMin)).toFixed(1)} Z` }, gData);
-      svgEl('path', { class: 'line', d }, gData);
+      const past = s.filter((p) => p.start < split);
+      const future = s.filter((p) => p.end > split);
+      if (past.length) svgEl('path', { class: 'line-past', d: this.stepPath(past, x, y, xMin, split) }, gData);
+      if (future.length) {
+        const fStart = Math.max(future[0].start, split);
+        const d = this.stepPath(future, x, y, split, xMax);
+        svgEl('path', { class: 'area', d: `${d} V ${y0.toFixed(1)} H ${x(fStart).toFixed(1)} Z` }, gData);
+        svgEl('path', { class: 'line', d }, gData);
+      }
     }
     if (cheapest) {
       const inSlot = visible.filter((p) => p.end > cheapest.start && p.start < cheapest.end);
@@ -265,12 +282,14 @@ export class PriceChart {
       for (const s of segs) svgEl('path', { class: 'line-cheapest', d: this.stepPath(s, x, y, Math.max(xMin, cheapest.start), Math.min(xMax, cheapest.end)) }, gData);
     }
 
-    // Jetzt-Linie
+    // Jetzt: feine Linie, Punkt auf der Kurve, Beschriftung
     if (now >= xMin && now <= xMax) {
       const nx = Math.round(x(now)) + 0.5;
       svgEl('line', { class: 'now-line', x1: nx, x2: nx, y1: MARGIN.top - 4, y2: MARGIN.top + plotH }, gAnno);
       const anchor = nx > MARGIN.left + plotW - 40 ? 'end' : 'start';
-      text(gAnno, anchor === 'end' ? nx - 4 : nx + 4, MARGIN.top - 8, 'Jetzt', 'now-label', { 'text-anchor': anchor });
+      text(gAnno, anchor === 'end' ? nx - 6 : nx + 6, MARGIN.top - 8, 'jetzt', 'now-label', { 'text-anchor': anchor });
+      const cur = visible.find((p) => p.start <= now && now < p.end);
+      if (cur) svgEl('circle', { class: 'now-dot', r: 5, cx: nx, cy: y(cur.price / 10).toFixed(1) }, gAnno);
     }
 
     // x-Achse: Uhrzeiten + Tage

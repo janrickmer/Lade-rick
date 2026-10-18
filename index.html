@@ -7,14 +7,15 @@
   <meta name="description" content="LadeRick zeigt den deutschen Börsenstrompreis (EPEX SPOT Day-Ahead) als Chart und berechnet das günstigste 4-Stunden-Fenster der letzten 72 Stunden – ohne Anmeldung.">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://www.smard.de https://api.energy-charts.info https://api.awattar.de; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'">
   <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9f9f7">
-  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d0d0d">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f1f2f4">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1012">
   <meta property="og:title" content="LadeRick – Börsenstrompreis Deutschland">
   <meta property="og:description" content="Aktueller Börsenstrompreis (Day-Ahead) als Chart und das günstigste 4-Stunden-Fenster der letzten 72 Stunden.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://laderick.janrickmer.de/">
   <link rel="canonical" href="https://laderick.janrickmer.de/">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="assets/fonts/hanken-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="assets/styles.css">
   <script src="src/theme-init.js"></script>
 </head>
@@ -23,20 +24,28 @@
 
   <header class="site-header">
     <div class="wrap header-inner">
-      <div class="brand">
-        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-          <path d="M18.5 2 6 18h8l-1.5 12L26 13h-8z" />
-        </svg>
-        <div>
-          <h1 class="brand-name">LadeRick</h1>
-          <p class="tagline">Der Börsenstrompreis für Deutschland – aktuell, transparent, ohne Anmeldung.</p>
-        </div>
-      </div>
-      <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false">Dunkles Design</button>
+      <a class="brand" href="./" aria-label="LadeRick – Startseite">
+        <span class="brand-tile" aria-hidden="true">
+          <svg class="brand-mark" viewBox="0 0 32 32" focusable="false">
+            <path d="M18.5 2 6 18h8l-1.5 12L26 13h-8z" />
+          </svg>
+        </span>
+        <span class="brand-text">
+          <span class="brand-name">LadeRick</span>
+          <span class="tagline">Börsenstrompreis für Deutschland</span>
+        </span>
+      </a>
+      <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false">
+        <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1Z" /></svg>
+        <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.2" /><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" /></svg>
+        <span class="sr-only">Dunkles Design</span>
+      </button>
     </div>
   </header>
 
   <main id="main" class="wrap">
+    <h1 class="sr-only">LadeRick – wann Strom an der Börse am günstigsten ist</h1>
+
     <div id="override-banner" class="banner" hidden>
       <span id="override-text"></span>
       <a id="override-link" href="./">Zur Live-Ansicht</a>
@@ -50,117 +59,114 @@
       <button id="retry" type="button" class="button">Erneut versuchen</button>
     </div>
 
-    <section class="card card-chart" aria-labelledby="chart-title" id="chart-card" data-state="loading">
-      <div class="chart-head">
-        <div>
-          <h2 id="chart-title" class="card-title">Preisverlauf</h2>
-          <p id="chart-subtitle" class="muted">&nbsp;</p>
+    <div class="board">
+      <article id="outlook" class="answer reveal" data-reveal="0" aria-labelledby="outlook-title" data-state="loading">
+        <h2 id="outlook-title" class="answer-title" data-field="headline">Günstigstes 4-Stunden-Fenster</h2>
+        <p class="answer-time" data-field="time">&nbsp;</p>
+        <p class="answer-price">ca. <strong class="answer-ct" data-field="ct">&nbsp;</strong> im Mittel <span class="answer-mwh" data-field="mwh"></span></p>
+        <p class="answer-starts" data-field="starts"></p>
+        <p class="flags" data-field="flags"></p>
+        <p class="answer-meta" data-field="note"></p>
+        <p class="answer-empty" data-field="empty" hidden></p>
+        <p class="answer-foot">Feste, bereits veröffentlichte Börsenpreise – keine Prognose. Berücksichtigt werden nur Fenster, die
+          noch nicht begonnen haben.<span data-field="known"></span></p>
+        <details class="answer-details" id="startzeit">
+          <summary><h3>Beste Ladezeit der letzten Tage</h3></summary>
+          <p data-field="st-text" hidden></p>
+          <p data-field="st-empty">Wird berechnet, sobald Preisdaten vorliegen.</p>
+        </details>
+      </article>
+
+      <section class="kpis reveal" data-reveal="1" aria-label="Kennzahlen">
+        <div class="tile tile-current" id="kpi-current" data-state="loading">
+          <p class="tile-label" data-field="label">Jetzt</p>
+          <p class="tile-value" data-field="value">&nbsp;</p>
+          <p class="tile-sub" data-field="sub"></p>
         </div>
-        <a href="#table" id="table-link" class="link">Als Tabelle anzeigen</a>
-      </div>
-      <fieldset class="range-picker" id="range-picker">
-        <legend class="range-legend">Zeitraum</legend>
-        <div class="segmented">
-          <input type="radio" name="range" id="range-1" value="1"><label for="range-1">1&nbsp;Tag</label>
-          <input type="radio" name="range" id="range-2" value="2"><label for="range-2">2&nbsp;Tage</label>
-          <input type="radio" name="range" id="range-3" value="3" checked><label for="range-3">3&nbsp;Tage</label>
+        <div class="tile" id="kpi-min" data-state="loading">
+          <p class="tile-label" data-field="label">Tiefster Preis, 72 h</p>
+          <p class="tile-value" data-field="value">&nbsp;</p>
+          <p class="tile-sub" data-field="sub"></p>
         </div>
-        <p class="range-hint muted" id="range-hint">Kalendertage: heute, heute und morgen, gestern bis morgen.</p>
-      </fieldset>
-      <p id="chart-readout" class="chart-readout" aria-hidden="true">&nbsp;</p>
-      <div id="chart" class="chart" tabindex="0" role="group" aria-label="Preisverlauf, mit Pfeiltasten navigierbar"></div>
-      <output id="chart-output" class="sr-only" aria-live="polite"></output>
-      <ul class="legend" id="chart-legend" aria-label="Legende">
-        <li><span class="swatch swatch-line" aria-hidden="true"></span>Vergangene Preise</li>
-        <li><span class="swatch swatch-future" aria-hidden="true"></span>Kommende Preise (bereits bekannt)</li>
-        <li id="legend-cheapest"><span class="swatch swatch-cheapest" aria-hidden="true"></span>Günstigstes kommendes 4-h-Fenster</li>
-      </ul>
-      <p id="chart-supplement" class="chart-note" hidden></p>
-      <details id="table" class="table-details">
-        <summary id="table-summary">Alle Werte als Tabelle</summary>
-        <div class="table-wrap">
-          <table id="price-table">
-            <caption id="table-caption">Alle Börsenpreise</caption>
-            <thead>
-              <tr>
-                <th scope="col">Zeitfenster</th>
-                <th scope="col" class="num">ct/kWh</th>
-                <th scope="col" class="num">€/MWh</th>
-                <th scope="col">Markierung</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
+        <div class="tile" id="kpi-max" data-state="loading">
+          <p class="tile-label" data-field="label">Höchster Preis, 72 h</p>
+          <p class="tile-value" data-field="value">&nbsp;</p>
+          <p class="tile-sub" data-field="sub"></p>
         </div>
-      </details>
-    </section>
+      </section>
 
-    <article id="outlook" class="card card-outlook card-orange" aria-labelledby="outlook-title" data-state="loading">
-      <p class="pill pill-future" data-field="pill">Kommend</p>
-      <h2 id="outlook-title" class="card-title">Günstigstes 4-Stunden-Fenster<span class="sr-only"> (kommend)</span></h2>
-      <p class="hero-overline" data-field="day">&nbsp;</p>
-      <p class="hero-time" data-field="time">&nbsp;</p>
-      <p class="hero-price">
-        <span class="hero-price-label"><span aria-hidden="true">Ø</span><span class="sr-only">Durchschnitt</span> ca.</span>
-        <strong class="hero-ct" data-field="ct">&nbsp;</strong>
-        <span class="hero-mwh muted" data-field="mwh"></span>
-      </p>
-      <p class="hero-flags" data-field="flags"></p>
-      <p class="hero-meta muted" data-field="note"></p>
-      <p class="hero-meta muted" data-field="starts"></p>
-      <p class="hero-empty" data-field="empty" hidden></p>
-      <p class="footnote muted">Feste, bereits veröffentlichte Börsenpreise – keine Prognose. Berücksichtigt werden nur Fenster, die noch nicht begonnen haben.</p>
-      <details class="info-details card-details" id="startzeit">
-        <summary><h3>Beste Ladezeit der letzten Tage</h3></summary>
-        <p data-field="st-text" hidden></p>
-        <p class="hero-empty" data-field="st-empty">Wird berechnet, sobald Preisdaten vorliegen.</p>
-      </details>
-    </article>
+      <section class="card card-chart reveal" data-reveal="2" aria-labelledby="chart-title" id="chart-card" data-state="loading">
+        <div class="chart-head">
+          <div class="chart-titles">
+            <h2 id="chart-title" class="card-title">Preisverlauf</h2>
+            <p id="chart-subtitle" class="card-sub">&nbsp;</p>
+          </div>
+          <a href="#table" id="table-link" class="text-link">Als Tabelle</a>
+        </div>
+        <fieldset class="range-picker" id="range-picker">
+          <legend class="sr-only">Zeitraum</legend>
+          <div class="segmented">
+            <span class="seg-indicator" aria-hidden="true"></span>
+            <input type="radio" name="range" id="range-1" value="1"><label for="range-1">1&nbsp;Tag</label>
+            <input type="radio" name="range" id="range-2" value="2"><label for="range-2">2&nbsp;Tage</label>
+            <input type="radio" name="range" id="range-3" value="3" checked><label for="range-3">3&nbsp;Tage</label>
+          </div>
+          <p class="range-hint" id="range-hint"></p>
+        </fieldset>
+        <p id="chart-readout" class="chart-readout" aria-hidden="true">&nbsp;</p>
+        <div id="chart" class="chart" data-ui tabindex="0" role="group" aria-label="Preisverlauf, mit Pfeiltasten navigierbar"></div>
+        <output id="chart-output" class="sr-only" aria-live="polite"></output>
+        <ul class="legend" id="chart-legend" aria-label="Legende">
+          <li><span class="swatch swatch-past" aria-hidden="true"></span>Vergangene Preise</li>
+          <li><span class="swatch swatch-future" aria-hidden="true"></span>Kommende Preise (bereits bekannt)</li>
+          <li id="legend-cheapest"><span class="swatch swatch-cheapest" aria-hidden="true"></span>Günstigstes kommendes 4-h-Fenster</li>
+        </ul>
+        <p id="chart-supplement" class="chart-note" hidden></p>
+        <details id="table" class="table-details">
+          <summary id="table-summary">Alle Werte als Tabelle</summary>
+          <div class="table-wrap">
+            <table id="price-table">
+              <caption id="table-caption">Alle Börsenpreise</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Zeitfenster</th>
+                  <th scope="col" class="num">ct/kWh</th>
+                  <th scope="col" class="num">€/MWh</th>
+                  <th scope="col">Markierung</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </details>
+      </section>
 
-    <article id="hero" class="card card-hero" aria-labelledby="hero-title" data-state="loading">
-      <p class="pill pill-past">Vergangen · letzte 72 Stunden</p>
-      <h2 id="hero-title" class="card-title">Günstigstes 4-Stunden-Fenster<span class="sr-only"> der letzten 72 Stunden</span></h2>
-      <p class="hero-overline" data-field="day">&nbsp;</p>
-      <p class="hero-time" data-field="time">&nbsp;</p>
-      <p class="hero-price">
-        <span class="hero-price-label"><span aria-hidden="true">Ø</span><span class="sr-only">Durchschnitt</span> ca.</span>
-        <strong class="hero-ct" data-field="ct">&nbsp;</strong>
-        <span class="hero-mwh muted" data-field="mwh"></span>
-      </p>
-      <p class="hero-compare" data-field="compare"></p>
-      <p class="hero-flags" data-field="flags"></p>
-      <p class="hero-meta muted" data-field="note"></p>
-      <p class="hero-meta muted" data-field="ended"></p>
-      <p class="hero-meta muted" data-field="range"></p>
-      <p class="hero-empty" data-field="empty" hidden></p>
-      <p class="footnote muted">Reiner Börsenpreis ohne Netzentgelte, Steuern, Umlagen und MwSt. – der Haushaltspreis liegt deutlich höher.</p>
-    </article>
+      <article id="hero" class="card card-past reveal" data-reveal="3" aria-labelledby="hero-title" data-state="loading">
+        <h2 id="hero-title" class="card-title">Günstigstes Fenster der letzten 72 Stunden</h2>
+        <p class="past-day" data-field="day">&nbsp;</p>
+        <p class="past-time" data-field="time">&nbsp;</p>
+        <p class="past-price">ca. <strong class="past-ct" data-field="ct">&nbsp;</strong> im Mittel <span class="past-mwh" data-field="mwh"></span></p>
+        <p class="flags" data-field="flags"></p>
+        <p class="past-empty" data-field="empty" hidden></p>
+        <div class="past-side">
+          <p class="past-compare" data-field="compare"></p>
+          <p class="past-meta" data-field="note"></p>
+          <p class="past-meta" data-field="ended"></p>
+          <p class="past-meta" data-field="range"></p>
+          <p class="past-foot">Reiner Börsenpreis ohne Netzentgelte, Steuern, Umlagen und MwSt. – der Haushaltspreis liegt deutlich höher.</p>
+        </div>
+      </article>
+    </div>
 
-    <section class="kpis" aria-label="Kennzahlen">
-      <div class="tile tile-current" id="kpi-current" data-state="loading">
-        <p class="tile-label" data-field="label">Jetzt</p>
-        <p class="tile-value" data-field="value">&nbsp;</p>
-        <p class="tile-sub muted" data-field="sub"></p>
-      </div>
-      <div class="tile" id="kpi-min" data-state="loading">
-        <p class="tile-label" data-field="label">Minimum (72 h)</p>
-        <p class="tile-value" data-field="value">&nbsp;</p>
-        <p class="tile-sub muted" data-field="sub"></p>
-      </div>
-      <div class="tile" id="kpi-max" data-state="loading">
-        <p class="tile-label" data-field="label">Maximum (72 h)</p>
-        <p class="tile-value" data-field="value">&nbsp;</p>
-        <p class="tile-sub muted" data-field="sub"></p>
-      </div>
-    </section>
-
-    <p id="status-meta" class="status-meta muted"></p>
-    <p class="footnote muted disclaimer-note">Alle Angaben ohne Gewähr – bitte prüfen Sie die Werte selbst, zum Beispiel direkt bei den
-      <a href="#quellen">Datenquellen</a>. <a href="#haftung">Haftungsausschluss</a></p>
+    <div class="status-block">
+      <p id="status-meta" class="status-meta"></p>
+      <p class="disclaimer-note">Alle Angaben ohne Gewähr – bitte prüfen Sie die Werte selbst, zum Beispiel direkt bei den
+        <a href="#quellen">Datenquellen</a>. <a href="#haftung">Haftungsausschluss</a></p>
+    </div>
 
 
-    <section class="card card-info" id="info" aria-labelledby="info-title">
-      <h2 id="info-title" class="card-title">Was zeigt LadeRick?</h2>
+    <section class="article reveal-scroll" id="info" aria-labelledby="info-title">
+      <h2 id="info-title" class="article-title">Was zeigt LadeRick?</h2>
 
       <h3>Der Börsenstrompreis</h3>
       <p>LadeRick zeigt den Preis der täglichen Day-Ahead-Auktion der Strombörse EPEX SPOT für die Gebotszone
@@ -186,15 +192,15 @@
         zeitgewichtete Mittelwert gebildet; das Fenster mit dem niedrigsten Mittel wird angezeigt. Bei gleichem Mittel gewinnt
         das frühere Fenster. Fehlen einzelne Werte, werden nur lückenlose Fenster berücksichtigt; gibt es keines, wird das beste
         Fenster mit mindestens 75&nbsp;% Datenabdeckung als Näherung gekennzeichnet. Der angegebene Durchschnittspreis ist auf eine
-        Nachkommastelle gerundet und deshalb ein „ungefährer“ Wert. Die orangefarbene Karte „Kommend“ nutzt dieselbe
+        Nachkommastelle gerundet und deshalb ein „ungefährer“ Wert. Die orangefarbene Karte oben nutzt dieselbe
         Rechnung für die bereits veröffentlichten Preise, berücksichtigt aber nur Fenster, die noch nicht begonnen haben
         (frühester Start ist die nächste volle Viertelstunde nach „jetzt“; die Seite rechnet kurz vor jeder Viertelstunde
-        neu). Nur dieses kommende Fenster ist im Diagramm grün markiert.</p>
+        neu). Nur dieses kommende Fenster ist im Diagramm orange markiert.</p>
       <p>Der aufklappbare Rückblick „Beste Ladezeit der letzten Tage“ in der orangefarbenen Karte fragt etwas anderes:
         Welche Uhrzeit war als Ladebeginn im Durchschnitt der letzten 72 Stunden am günstigsten? Dafür werden für jede
         Uhrzeit im 15-Minuten-Raster die 4-Stunden-Fenster mit diesem Startzeitpunkt an allen Tagen des Zeitraums gemittelt
         (jeder Tag zählt gleich); die Uhrzeit mit dem niedrigsten Durchschnitt wird genannt. Gewertet werden nur Uhrzeiten,
-        für die mindestens zwei vollständige Fenster vorliegen. Das einzelne günstigste Fenster (Karte „Vergangen“) kann davon
+        für die mindestens zwei vollständige Fenster vorliegen. Das einzelne günstigste Fenster der letzten 72 Stunden kann davon
         abweichen, wenn ein Tag einen Ausreißer hatte.</p>
 
       <h3>Negative Preise</h3>
@@ -202,7 +208,7 @@
         Erzeuger zahlen für die Abnahme. In dynamischen Tarifen wird der Börsenanteil dann je nach Tarif gutgeschrieben oder
         auf null begrenzt; die festen Bestandteile bleiben.</p>
 
-      <details class="info-details" id="quellen">
+      <details class="info-details reveal-scroll" id="quellen">
         <summary><h3>Datenquellen</h3></summary>
         <p>LadeRick greift ausschließlich auf öffentliche, regelmäßig aktualisierte Quellen zu. Die erste erreichbare Quelle mit
           ausreichend Daten wird verwendet; welche das ist, steht in der Statuszeile unter den Kennzahlen. Fehlen dort Preise,
@@ -234,8 +240,8 @@
       </details>
     </section>
 
-    <section class="card card-info" id="rechtliches" aria-labelledby="legal-title">
-      <h2 id="legal-title" class="card-title">Rechtliches</h2>
+    <section class="legal reveal-scroll" id="rechtliches" aria-labelledby="legal-title">
+      <h2 id="legal-title" class="article-title">Rechtliches</h2>
 
       <details class="info-details" id="impressum">
         <summary><h3>Impressum</h3></summary>
@@ -312,13 +318,17 @@
   </main>
 
   <footer class="site-footer">
-    <div class="wrap">
+    <div class="wrap footer-inner">
+      <p class="footer-brand">
+        <span class="brand-tile brand-tile-sm" aria-hidden="true"><svg class="brand-mark" viewBox="0 0 32 32" focusable="false"><path d="M18.5 2 6 18h8l-1.5 12L26 13h-8z" /></svg></span>
+        LadeRick
+      </p>
       <p>Daten: <a href="https://www.smard.de/" rel="noopener">Bundesnetzagentur | SMARD.de</a> ·
         <a href="https://www.energy-charts.info/" rel="noopener">Energy-Charts (Fraunhofer ISE)</a> ·
         <a href="https://www.awattar.de/" rel="noopener">aWATTar</a></p>
       <p>Alle Angaben ohne Gewähr – <a href="#haftung">bitte selbst prüfen</a>.</p>
       <p><a href="#impressum">Impressum</a> · <a href="#datenschutz">Datenschutz</a> · <a href="#haftung">Haftungsausschluss</a> ·
-        <a href="https://github.com/janrickmer/Lade-rick" rel="noopener">Quellcode auf GitHub</a></p>
+        <a href="https://github.com/janrickmer/Lade-rick" rel="noopener">Quellcode auf GitHub</a> · Schrift: Hanken Grotesk (SIL Open Font License)</p>
     </div>
   </footer>
 

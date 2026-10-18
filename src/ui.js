@@ -3,7 +3,7 @@
 
 import {
   formatCt, formatMwh, formatComparison, formatWindow, formatRange, formatTimeRange, formatTime, formatDateShort,
-  formatDateTime, formatAgo, formatIn, berlinParts, formatEndTime,
+  formatDateTime, formatAgo, formatIn, berlinParts, formatEndTime, relativeDayWord,
 } from './format.js';
 import { HOUR } from './analysis.js';
 import { config } from './config.js';
@@ -95,7 +95,7 @@ export function renderHero(result, { now }) {
   const { slot } = result;
   const w = formatWindow(slot.start, slot.end, { now });
   setField(root, 'day', w.overline);
-  setField(root, 'time', w.main).dataset.dst = w.dst ? 'true' : 'false';
+  setTimeWithUnit(setField(root, 'time', w.main), w);
   setField(root, 'note', w.note ? `Fenster über die Zeitumstellung: ${w.note}.` : '');
   setField(root, 'ct', formatCt(slot.meanPrice));
   setField(root, 'mwh', `(≈ ${formatMwh(slot.meanPrice)})`);
@@ -129,9 +129,9 @@ export function renderOutlook(upcoming, { now, knownUntil }) {
   const root = $('#outlook');
   root.dataset.state = 'ready';
   const empty = $('[data-field="empty"]', root);
-  setField(root, 'pill', knownUntil ? `Kommend · bekannt bis ${formatKnownUntil(knownUntil)}` : 'Kommend');
+  setField(root, 'known', knownUntil ? `Bekannte Preise bis ${formatKnownUntil(knownUntil)}.` : '');
   if (!upcoming) {
-    setField(root, 'day', '');
+    setField(root, 'headline', 'Günstigstes 4-Stunden-Fenster');
     setField(root, 'time', '–');
     setField(root, 'ct', '–');
     setField(root, 'mwh', '');
@@ -144,14 +144,31 @@ export function renderOutlook(upcoming, { now, knownUntil }) {
   }
   empty.hidden = true;
   const w = formatWindow(upcoming.start, upcoming.end, { now });
-  setField(root, 'day', w.overline);
-  setField(root, 'time', w.main).dataset.dst = w.dst ? 'true' : 'false';
+  setField(root, 'headline', outlookHeadline(upcoming.start, now));
+  setTimeWithUnit(setField(root, 'time', w.main), w);
   setField(root, 'note', w.note ? `Fenster über die Zeitumstellung: ${w.note}.` : '');
   setField(root, 'ct', formatCt(upcoming.meanPrice));
   setField(root, 'mwh', `(≈ ${formatMwh(upcoming.meanPrice)})`);
   setChips(root, 'flags', upcoming.meanPrice < 0 ? [{ text: 'negativer Preis', title: NEGATIVE_HINT }] : []);
   // Das kommende Fenster beginnt nie vor „jetzt“ (siehe cheapestUpcomingSlot)
   setField(root, 'starts', `Beginnt ${formatIn(upcoming.start, now)}.`);
+}
+
+/** Uhrzeit groß, die Einheit „Uhr“ kleiner daneben (Textinhalt bleibt „11:00 – 15:00 Uhr“). */
+function setTimeWithUnit(el, w) {
+  if (!el) return;
+  el.dataset.dst = w.dst ? 'true' : 'false';
+  if (w.dst || !w.main.endsWith(' Uhr')) { el.textContent = w.main; return; }
+  const unit = document.createElement('span');
+  unit.className = 'time-unit';
+  unit.textContent = 'Uhr';
+  el.replaceChildren(`${w.main.slice(0, -4)} `, unit);
+}
+
+/** „Am günstigsten laden Sie morgen, Di., 29.09.“ – der Tag, an dem das Fenster beginnt. */
+export function outlookHeadline(start, now) {
+  const word = relativeDayWord(start, now);
+  return `Am günstigsten laden Sie ${word ? `${word}, ` : 'am '}${formatDateShort(start)}`;
 }
 
 // ---------- Rückblick „Beste Ladezeit der letzten Tage“ (aufklappbar in der orangen Karte) ----------
@@ -231,11 +248,8 @@ export function renderChartMeta({ points, view, resolutionMinutes, supplements, 
   const dayLabel = view?.label ? `${view.label} · ` : '';
   $('#chart-subtitle').textContent = `${dayLabel}${formatRange(xMin, xMax)} · ${resLabel}`;
   const hint = $('#range-hint');
-  if (hint) {
-    hint.textContent = view?.label
-      ? `${view.label}: ${formatRange(xMin, xMax)}.${view.tomorrowKnown ? '' : ' Die Preise für morgen erscheinen täglich gegen 13 Uhr.'}`
-      : '';
-  }
+  // Zeitraum und Datum stehen schon im Untertitel; der Hinweis erklärt nur, warum „morgen“ noch fehlt
+  if (hint) hint.textContent = view?.label && !view.tomorrowKnown ? 'Die Preise für morgen erscheinen täglich gegen 13 Uhr.' : '';
 }
 
 /** Name der Hauptquelle (bei einem Snapshot die Originalquelle). */

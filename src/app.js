@@ -314,7 +314,34 @@ function revealTarget(hash, { scroll = false } = {}) {
   try { el = document.getElementById(decodeURIComponent(hash.slice(1))); } catch { return; }
   if (!el) return;
   for (let d = el.closest('details'); d; d = d.parentElement?.closest('details') ?? null) d.open = true;
+  // Ziel eines Sprungs erscheint sofort und ohne Bewegung, damit es an der richtigen Stelle landet
+  for (let r = el.closest('.reveal-scroll'); r; r = r.parentElement?.closest('.reveal-scroll') ?? null) r.classList.add('is-visible', 'is-instant');
   if (scroll) el.scrollIntoView({ block: 'start' });
+}
+
+// ---------- Bewegung ----------
+
+/** Abschnitte unterhalb des ersten Bildschirms erscheinen einmal beim Hineinscrollen; ohne Observer sofort. */
+function setupReveal() {
+  const items = [...document.querySelectorAll('.reveal-scroll')];
+  if (typeof IntersectionObserver !== 'function') { for (const el of items) el.classList.add('is-visible'); return; }
+  const io = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      entry.target.classList.add('is-visible');
+      io.unobserve(entry.target);
+    }
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.01 });
+  for (const el of items) io.observe(el);
+  window.addEventListener('beforeprint', () => { for (const el of items) el.classList.add('is-visible'); });
+}
+
+/** Der Zeitraum-Umschalter gleitet bei Zeiger-Bedienung; per Tastatur wechselt er ohne Bewegung. */
+function setupSegmented() {
+  const seg = document.querySelector('#range-picker .segmented');
+  if (!seg) return;
+  seg.addEventListener('keydown', () => { seg.dataset.keyboard = 'true'; });
+  seg.addEventListener('pointerdown', () => { seg.dataset.keyboard = 'false'; });
 }
 
 function setupSectionLinks() {
@@ -338,6 +365,8 @@ function setupSectionLinks() {
 
 function init() {
   setupSectionLinks();
+  setupReveal();
+  setupSegmented();
   ui.renderOverrideBanner({ nowOverride, sourceOverride });
   const link = document.getElementById('override-link');
   if (link) link.href = window.location.pathname;

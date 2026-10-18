@@ -55,6 +55,9 @@ aktueller Preis, Minimum und Maximum. Erfolg heißt: Die Antwort ist in Sekunden
 - Die Karte mit dem günstigsten kommenden 4-Stunden-Fenster ist orange.
 - Helle und dunkle Darstellung mit Umschalter.
 - Ton: sachlich, ehrlich, zum eigenen Prüfen ermutigend; keine Werbesprache.
+- Gestaltung (Entscheidung vom 18.10.2026): der Standard der Kategorie – eine saubere Energiepreis-App –, ohne Ironie
+  und auf höchstem Niveau umgesetzt. Messlatte für die Sorgfalt: Tibber-App, Octopus Energy, Apple Wetter/Aktien,
+  Energy-Charts. Nicht technisch-kalt, nicht werblich.
 
 ## Evidence on Hand
 
