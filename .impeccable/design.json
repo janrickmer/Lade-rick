@@ -1,0 +1,845 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-18T21:16:21Z",
+  "title": "Design System: LadeRick",
+  "extensions": {
+    "colorMeta": {
+      "orange": {
+        "role": "primary",
+        "displayName": "Ladeorange",
+        "canonical": "oklch(72.9% 0.159 57.3)",
+        "tonalRamp": [
+          "#160700",
+          "#3a1b00",
+          "#623100",
+          "#8d4900",
+          "#be6500",
+          "#ed872a",
+          "#ffb985",
+          "#ffeadb"
+        ]
+      },
+      "orange-ink": {
+        "role": "primary",
+        "displayName": "Orange-Tinte",
+        "canonical": "oklch(15.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242424",
+          "#404040",
+          "#5d5d5d",
+          "#808080",
+          "#a4a4a4",
+          "#cacaca",
+          "#eeeeee"
+        ]
+      },
+      "orange-ink-2": {
+        "role": "primary",
+        "displayName": "Gedämpfte Orange-Tinte",
+        "canonical": "oklch(15.0% 0.000 89.9 / 0.74)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242424",
+          "#404040",
+          "#5d5d5d",
+          "#808080",
+          "#a4a4a4",
+          "#cacaca",
+          "#eeeeee"
+        ]
+      },
+      "band-edge": {
+        "role": "primary",
+        "displayName": "Gebrannte Kante",
+        "canonical": "oklch(56.0% 0.142 50.0)",
+        "tonalRamp": [
+          "#180600",
+          "#3d1800",
+          "#672c00",
+          "#944300",
+          "#c16222",
+          "#ea874b",
+          "#ffb891",
+          "#ffeade"
+        ]
+      },
+      "orange-wash": {
+        "role": "primary",
+        "displayName": "Orange-Hauch",
+        "canonical": "oklch(72.9% 0.159 57.3 / 0.16)",
+        "tonalRamp": [
+          "#160700",
+          "#3a1b00",
+          "#623100",
+          "#8d4900",
+          "#be6500",
+          "#ed872a",
+          "#ffb985",
+          "#ffeadb"
+        ]
+      },
+      "answer-veil": {
+        "role": "primary",
+        "displayName": "Weißer Schleier",
+        "canonical": "oklch(100.0% 0.000 89.9 / 0.24)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242424",
+          "#404040",
+          "#5d5d5d",
+          "#808080",
+          "#a4a4a4",
+          "#cacaca",
+          "#eeeeee"
+        ]
+      },
+      "page": {
+        "role": "neutral",
+        "displayName": "Kühles Hellgrau",
+        "canonical": "oklch(96.1% 0.003 264.5)",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#232425",
+          "#3f4041",
+          "#5d5e5f",
+          "#7f8082",
+          "#a4a4a6",
+          "#c9cacc",
+          "#edeef0"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Weiß",
+        "canonical": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242424",
+          "#404040",
+          "#5d5d5d",
+          "#808080",
+          "#a4a4a4",
+          "#cacaca",
+          "#eeeeee"
+        ]
+      },
+      "surface-2": {
+        "role": "neutral",
+        "displayName": "Helle Tonstufe",
+        "canonical": "oklch(94.8% 0.005 258.3)",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#232426",
+          "#3e4042",
+          "#5c5e60",
+          "#7e8083",
+          "#a3a5a7",
+          "#c9cbcd",
+          "#edeff2"
+        ]
+      },
+      "surface-3": {
+        "role": "neutral",
+        "displayName": "Tiefere Tonstufe",
+        "canonical": "oklch(92.1% 0.008 260.7)",
+        "tonalRamp": [
+          "#090b0e",
+          "#222428",
+          "#3d4044",
+          "#5b5e62",
+          "#7e8085",
+          "#a2a5a9",
+          "#c8cbcf",
+          "#eceff4"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Fast-Schwarz",
+        "canonical": "oklch(18.2% 0.004 264.5)",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#232426",
+          "#3e4042",
+          "#5c5e60",
+          "#7f8083",
+          "#a3a4a7",
+          "#c9cacd",
+          "#edeef1"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Schiefer",
+        "canonical": "oklch(40.9% 0.014 269.3)",
+        "tonalRamp": [
+          "#090b11",
+          "#21242b",
+          "#3d4047",
+          "#5a5d66",
+          "#7d8089",
+          "#a1a4ae",
+          "#c7cad4",
+          "#ebeef8"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Gedämpftes Grau",
+        "canonical": "oklch(51.7% 0.016 268.4)",
+        "tonalRamp": [
+          "#080b12",
+          "#21242c",
+          "#3c4049",
+          "#5a5d67",
+          "#7c808a",
+          "#a0a4af",
+          "#c6cad6",
+          "#eaeefa"
+        ]
+      },
+      "grid": {
+        "role": "neutral",
+        "displayName": "Gitterton",
+        "canonical": "oklch(93.4% 0.006 264.5)",
+        "tonalRamp": [
+          "#0a0b0e",
+          "#232427",
+          "#3e4043",
+          "#5c5e61",
+          "#7e8084",
+          "#a3a5a8",
+          "#c8cace",
+          "#eceef2"
+        ]
+      },
+      "axis": {
+        "role": "neutral",
+        "displayName": "Achsgrau",
+        "canonical": "oklch(64.6% 0.013 264.5)",
+        "tonalRamp": [
+          "#090b11",
+          "#21242a",
+          "#3c4047",
+          "#5a5e65",
+          "#7c8088",
+          "#a1a5ad",
+          "#c6cbd3",
+          "#eaeff7"
+        ]
+      },
+      "line-past": {
+        "role": "neutral",
+        "displayName": "Vergangenheitsgrau",
+        "canonical": "oklch(61.3% 0.013 264.5)",
+        "tonalRamp": [
+          "#080b11",
+          "#21242a",
+          "#3c4047",
+          "#5a5e65",
+          "#7c8088",
+          "#a0a5ad",
+          "#c6cbd3",
+          "#eaeff8"
+        ]
+      },
+      "past-wash": {
+        "role": "neutral",
+        "displayName": "Vergangenheitston",
+        "canonical": "oklch(97.0% 0.003 264.5)",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#232425",
+          "#3f4041",
+          "#5d5e5f",
+          "#7f8082",
+          "#a4a4a6",
+          "#c9cacc",
+          "#edeef0"
+        ]
+      },
+      "future-area": {
+        "role": "neutral",
+        "displayName": "Zukunftsfläche",
+        "canonical": "oklch(18.2% 0.004 264.5 / 0.06)",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#232426",
+          "#3e4042",
+          "#5c5e60",
+          "#7f8083",
+          "#a3a4a7",
+          "#c9cacd",
+          "#edeef1"
+        ]
+      },
+      "shimmer": {
+        "role": "neutral",
+        "displayName": "Ladeschimmer",
+        "canonical": "oklch(18.2% 0.004 264.5 / 0.07)",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#232426",
+          "#3e4042",
+          "#5c5e60",
+          "#7f8083",
+          "#a3a4a7",
+          "#c9cacd",
+          "#edeef1"
+        ]
+      },
+      "critical": {
+        "role": "status",
+        "displayName": "Signalrot",
+        "canonical": "oklch(53.8% 0.189 26.4)",
+        "tonalRamp": [
+          "#1f0001",
+          "#4b0004",
+          "#7c000b",
+          "#b00d18",
+          "#da433e",
+          "#ff7268",
+          "#ffb5ac",
+          "#ffe9e6"
+        ]
+      },
+      "warning-wash": {
+        "role": "status",
+        "displayName": "Hinweisgelb",
+        "canonical": "oklch(95.2% 0.051 88.6)",
+        "tonalRamp": [
+          "#100a00",
+          "#2e2202",
+          "#4b3e1e",
+          "#695c3c",
+          "#8d7f5d",
+          "#b2a381",
+          "#d8c9a5",
+          "#fcedc8"
+        ]
+      },
+      "page-dark": {
+        "role": "neutral",
+        "displayName": "Tiefes Anthrazit",
+        "canonical": "oklch(17.3% 0.004 264.5)",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#232426",
+          "#3e4042",
+          "#5c5e60",
+          "#7f8083",
+          "#a3a4a7",
+          "#c9cacd",
+          "#edeef1"
+        ]
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "Anthrazitfläche",
+        "canonical": "oklch(22.7% 0.006 271.1)",
+        "tonalRamp": [
+          "#0a0b0e",
+          "#232427",
+          "#3e4043",
+          "#5c5d61",
+          "#7f8084",
+          "#a3a4a8",
+          "#c9cace",
+          "#edeef3"
+        ]
+      },
+      "surface-2-dark": {
+        "role": "neutral",
+        "displayName": "Helle Tonstufe (dunkel)",
+        "canonical": "oklch(27.6% 0.008 264.4)",
+        "tonalRamp": [
+          "#090b0f",
+          "#222428",
+          "#3e4044",
+          "#5b5e62",
+          "#7e8085",
+          "#a2a5aa",
+          "#c8cad0",
+          "#eceef4"
+        ]
+      },
+      "surface-3-dark": {
+        "role": "neutral",
+        "displayName": "Tiefere Tonstufe (dunkel)",
+        "canonical": "oklch(31.7% 0.009 268.4)",
+        "tonalRamp": [
+          "#090b0f",
+          "#222429",
+          "#3e4045",
+          "#5b5d63",
+          "#7e8086",
+          "#a2a4ab",
+          "#c8cad1",
+          "#eceef5"
+        ]
+      },
+      "ink-dark": {
+        "role": "neutral",
+        "displayName": "Fast-Schwarz (dunkel)",
+        "canonical": "oklch(97.0% 0.003 264.5)",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#232425",
+          "#3f4041",
+          "#5d5e5f",
+          "#7f8082",
+          "#a4a4a6",
+          "#c9cacc",
+          "#edeef0"
+        ]
+      },
+      "ink-2-dark": {
+        "role": "neutral",
+        "displayName": "Schiefer (dunkel)",
+        "canonical": "oklch(81.7% 0.010 267.3)",
+        "tonalRamp": [
+          "#090b10",
+          "#222429",
+          "#3d4045",
+          "#5b5e64",
+          "#7d8087",
+          "#a2a4ab",
+          "#c7cad1",
+          "#ebeef6"
+        ]
+      },
+      "muted-dark": {
+        "role": "neutral",
+        "displayName": "Gedämpftes Grau (dunkel)",
+        "canonical": "oklch(68.9% 0.014 266.7)",
+        "tonalRamp": [
+          "#080b11",
+          "#21242b",
+          "#3c4047",
+          "#5a5e66",
+          "#7c8089",
+          "#a0a5ae",
+          "#c6cad4",
+          "#eaeef8"
+        ]
+      },
+      "grid-dark": {
+        "role": "neutral",
+        "displayName": "Gitterton (dunkel)",
+        "canonical": "oklch(29.3% 0.008 264.4)",
+        "tonalRamp": [
+          "#090b0f",
+          "#222428",
+          "#3e4044",
+          "#5b5e62",
+          "#7e8085",
+          "#a2a5aa",
+          "#c8cad0",
+          "#eceef4"
+        ]
+      },
+      "axis-dark": {
+        "role": "neutral",
+        "displayName": "Achsgrau (dunkel)",
+        "canonical": "oklch(55.2% 0.015 266.6)",
+        "tonalRamp": [
+          "#080b11",
+          "#21242b",
+          "#3c4048",
+          "#5a5e66",
+          "#7c8089",
+          "#a0a5ae",
+          "#c6cad4",
+          "#eaeef9"
+        ]
+      },
+      "line-past-dark": {
+        "role": "neutral",
+        "displayName": "Vergangenheitsgrau (dunkel)",
+        "canonical": "oklch(55.2% 0.015 266.6)",
+        "tonalRamp": [
+          "#080b11",
+          "#21242b",
+          "#3c4048",
+          "#5a5e66",
+          "#7c8089",
+          "#a0a5ae",
+          "#c6cad4",
+          "#eaeef9"
+        ]
+      },
+      "past-wash-dark": {
+        "role": "neutral",
+        "displayName": "Vergangenheitston (dunkel)",
+        "canonical": "oklch(25.7% 0.008 274.7)",
+        "tonalRamp": [
+          "#0a0b0e",
+          "#232428",
+          "#3e3f44",
+          "#5c5d62",
+          "#7f8085",
+          "#a3a4a9",
+          "#c9cad0",
+          "#edeef4"
+        ]
+      },
+      "future-area-dark": {
+        "role": "neutral",
+        "displayName": "Zukunftsfläche (dunkel)",
+        "canonical": "oklch(97.0% 0.003 264.5 / 0.07)",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#232425",
+          "#3f4041",
+          "#5d5e5f",
+          "#7f8082",
+          "#a4a4a6",
+          "#c9cacc",
+          "#edeef0"
+        ]
+      },
+      "shimmer-dark": {
+        "role": "neutral",
+        "displayName": "Ladeschimmer (dunkel)",
+        "canonical": "oklch(97.0% 0.003 264.5 / 0.08)",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#232425",
+          "#3f4041",
+          "#5d5e5f",
+          "#7f8082",
+          "#a4a4a6",
+          "#c9cacc",
+          "#edeef0"
+        ]
+      },
+      "orange-wash-dark": {
+        "role": "primary",
+        "displayName": "Orange-Hauch (dunkel)",
+        "canonical": "oklch(72.9% 0.159 57.3 / 0.22)",
+        "tonalRamp": [
+          "#160700",
+          "#3a1b00",
+          "#623100",
+          "#8d4900",
+          "#be6500",
+          "#ed872a",
+          "#ffb985",
+          "#ffeadb"
+        ]
+      },
+      "critical-dark": {
+        "role": "status",
+        "displayName": "Signalrot (dunkel)",
+        "canonical": "oklch(71.0% 0.182 25.9)",
+        "tonalRamp": [
+          "#1f0001",
+          "#4b0004",
+          "#7c000d",
+          "#ad171e",
+          "#d74642",
+          "#ff7269",
+          "#ffb5ad",
+          "#ffe9e6"
+        ]
+      },
+      "warning-wash-dark": {
+        "role": "status",
+        "displayName": "Hinweisgelb (dunkel)",
+        "canonical": "oklch(32.2% 0.032 84.2)",
+        "tonalRamp": [
+          "#110a00",
+          "#2b2311",
+          "#483f2c",
+          "#665c49",
+          "#897f6b",
+          "#aea38e",
+          "#d4c9b3",
+          "#f9edd7"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Antwortzeit",
+        "purpose": "Nur die Uhrzeit des günstigsten kommenden Fensters auf der Antwortfläche; fluid nach deren Breite (Container-Einheit). In der Nacht der Zeitumstellung schmaler: clamp(1.75rem, 8.5cqi, 3.5rem)."
+      },
+      "headline": {
+        "displayName": "Wert",
+        "purpose": "Wert der Kachel „Jetzt“, Uhrzeit im Rückblick, Abschnittstitel des Erklärteils. 28 px, ab 720 px Viewport 32 px."
+      },
+      "title": {
+        "displayName": "Titel",
+        "purpose": "Kartentitel, Satzüberschrift und Preiszeile der Antwort, Nebenkachel-Werte, Markenname (700), Tooltip-Wert (700)."
+      },
+      "body": {
+        "displayName": "Text",
+        "purpose": "Fließtext, Bedienelemente (600), Ablesezeile. 16 px, ab 720 px Viewport 17 px; Lesetext mit Zeilenhöhe 1.65 auf höchstens 72ch."
+      },
+      "label": {
+        "displayName": "Klein",
+        "purpose": "Achsen, Legende, Fußnoten, Tagline, Chips (600), Tooltip-Text; Fensterzeit und „jetzt“ über dem Diagramm in 700."
+      }
+    },
+    "shadows": [
+      {
+        "name": "float",
+        "value": "0 1px 2px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.14)",
+        "purpose": "Schwebeschatten: ausschließlich der Diagramm-Tooltip. Alle ruhenden Flächen sind flach."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "purpose": "Einzige Kurve für Druck, Gleiten, Chevrons und Eingänge."
+      },
+      {
+        "name": "t-press",
+        "value": "140ms",
+        "purpose": "Druck: scale 0.97 (Knopf, Segment, Tabellen-Umschalter), 0.99 (breite Aufklappzeilen), 0.95 (runder Designknopf)."
+      },
+      {
+        "name": "t-hover",
+        "value": "180ms",
+        "purpose": "Hover-Farbwechsel und Dimmen der Karten beim Nachladen."
+      },
+      {
+        "name": "t-ui",
+        "value": "240ms",
+        "purpose": "Segment-Gleiten per clip-path, Chevron-Drehung, Überblenden der Designsymbole, Einblenden von Fensterzeit und Fensterkurve."
+      },
+      {
+        "name": "t-reveal",
+        "value": "420ms",
+        "purpose": "Die Bühne setzt sich einmal: translateY(10px) → 0, nur transform; Antwort/Diagramm/Rückblick 0/70/140 ms, Kennzahlen 70/120/170 ms versetzt."
+      },
+      {
+        "name": "band-rise",
+        "value": "440ms cubic-bezier(0.23, 1, 0.32, 1) calc(140ms - var(--enter-elapsed, 0ms))",
+        "purpose": "Fensterband steigt beim ersten Zeichnen einmal vom Boden auf (scaleY 0 → 1); Neuzeichnungen innerhalb von 900 ms setzen die Bewegung an der erreichten Stelle fort."
+      },
+      {
+        "name": "enter-window",
+        "value": "900ms",
+        "purpose": "Zeitraum nach dem ersten Zeichnen mit Daten, in dem die Eingangsbewegung weiterläuft; danach bleiben Neuberechnungen still."
+      },
+      {
+        "name": "refresh-dim",
+        "value": "opacity 0.75, delay 300ms",
+        "purpose": "Karten dimmen beim Nachladen erst nach 300 ms, damit schnelle Abrufe nicht flackern."
+      },
+      {
+        "name": "theme-switch",
+        "value": "none",
+        "purpose": "Hell/Dunkel springt ohne Übergänge in einem Zug um (zwei Frames lang alle Übergänge aus); nur die Symbole im Knopf blenden."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce",
+        "purpose": "Keine Verschiebung der Bühne, Band blendet 200 ms ein statt aufzusteigen, keine Druckeffekte, keine Übergänge an Segmenten und Chevrons, Designsymbole nur per Deckkraft (150 ms)."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "table-compact",
+        "value": "419.98px",
+        "purpose": "max-width: Tabelle zeigt nur Zeit und ct/kWh, Markierung als Kennzeichen."
+      },
+      {
+        "name": "md",
+        "value": "720px",
+        "purpose": "Größere Abstände (gap 16, pad 28, gutter 32), Text 17 px, Wert 32 px, Diagramm 340 px, Tooltip statt Ablesezeile."
+      },
+      {
+        "name": "lg",
+        "value": "960px",
+        "purpose": "Antwortfläche 7fr neben gestapelten Kennzahlen 5fr; Rückblick innen 5 : 7."
+      },
+      {
+        "name": "xl",
+        "value": "1200px",
+        "purpose": "Diagramm 380 px hoch."
+      },
+      {
+        "name": "board-2col",
+        "value": "18.5em",
+        "purpose": "Container-Abfrage auf die Bühne: Kennzahlen in zwei Spalten."
+      },
+      {
+        "name": "board-3col",
+        "value": "40em",
+        "purpose": "Container-Abfrage auf die Bühne: Kennzahlen in drei Spalten (1.3 : 1 : 1)."
+      },
+      {
+        "name": "readout-2line",
+        "value": "19.5em",
+        "purpose": "max-width, Container-Abfrage auf die Diagrammkarte: Ablesezeile reserviert zwei Zeilen."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Antwortfläche",
+      "kind": "card",
+      "refersTo": "answer-card",
+      "description": "Signatur: das günstigste kommende 4-Stunden-Fenster in Ladeorange mit dunkler Schrift, in hell und dunkel gleich.",
+      "html": "<article class=\"ds-answer\"><h2 class=\"ds-answer-title\">Am günstigsten laden Sie morgen, Di., 29.09.</h2><p class=\"ds-answer-time\"><span class=\"ds-nowrap\">11:00 –</span> <span class=\"ds-nowrap\">15:00 <span class=\"ds-answer-unit\">Uhr</span></span></p><p class=\"ds-answer-price\">ca. <strong>1,5 ct/kWh</strong> im Mittel<span class=\"ds-answer-starts\"> · Beginnt in etwa 21 Stunden.</span></p><p class=\"ds-answer-foot\">≈ 15 €/MWh · Feste, bereits veröffentlichte Börsenpreise – keine Prognose.</p><details class=\"ds-answer-details\"><summary>Beste Ladezeit der letzten Tage</summary><p>Wird berechnet, sobald Preisdaten vorliegen.</p></details></article>",
+      "css": ".ds-answer { container-type: inline-size; background: var(--orange, #f08a2e); color: var(--orange-ink, #0b0b0b); border-radius: var(--radius-lg, 24px); padding: 24px 20px 20px; font-family: \"Hanken Grotesk\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-variant-numeric: tabular-nums; line-height: 1.5; } .ds-answer-title { margin: 0; font-size: 1.25rem; font-weight: 650; line-height: 1.2; letter-spacing: -0.01em; } .ds-answer-time { margin: 8px 0 0; font-size: clamp(2.125rem, 15cqi, 6.5rem); font-weight: 700; line-height: 1.02; letter-spacing: -0.035em; } .ds-nowrap { white-space: nowrap; } .ds-answer-unit { font-size: 1.25rem; font-weight: 600; letter-spacing: 0; } .ds-answer-price { margin: 14px 0 0; font-size: 1.25rem; color: var(--orange-ink-2, rgba(11, 11, 11, 0.74)); } .ds-answer-price strong { color: var(--orange-ink, #0b0b0b); font-weight: 700; } .ds-answer-starts { color: var(--orange-ink, #0b0b0b); font-weight: 600; } .ds-answer-foot { margin: 18px 0 0; font-size: 0.8125rem; color: var(--orange-ink-2, rgba(11, 11, 11, 0.74)); } .ds-answer-details { margin-top: 16px; border-radius: 12px; background: rgba(255, 255, 255, 0.24); } .ds-answer-details > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px; border-radius: 12px; font-weight: 650; transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1), background-color 180ms ease; } .ds-answer-details > summary::-webkit-details-marker { display: none; } .ds-answer-details > summary::after { content: \"\"; flex: none; width: 8px; height: 8px; margin: 0 4px 3px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform 240ms cubic-bezier(0.23, 1, 0.32, 1); margin-left: auto; } .ds-answer-details[open] > summary { border-radius: 12px 12px 0 0; } .ds-answer-details[open] > summary::after { transform: translateY(3px) rotate(-135deg); } .ds-answer-details > summary:hover { background: rgba(255, 255, 255, 0.24); } .ds-answer-details > summary:active { transform: scale(0.99); } .ds-answer-details > summary:focus-visible { outline: 2px solid var(--orange-ink, #0b0b0b); outline-offset: 3px; } .ds-answer-details p { margin: 0; padding: 0 16px 16px; }"
+    },
+    {
+      "name": "Primärknopf",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Tinte-Pille mit hellgrauer Schrift; derzeit nur „Erneut versuchen“ in der Fehlerkarte.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Erneut versuchen</button>",
+      "css": ".ds-btn-primary { font-family: \"Hanken Grotesk\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-weight: 600; font-size: 1rem; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 20px; border: 0; border-radius: 999px; cursor: pointer; background: var(--ink, #111214); color: var(--page, #f1f2f4); transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1), opacity 180ms ease; } @media (hover: hover) and (pointer: fine) { .ds-btn-primary:hover { opacity: 0.88; } } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: 2px solid var(--focus, #111214); outline-offset: 3px; } @media (prefers-reduced-motion: reduce) { .ds-btn-primary:active { transform: none; } }"
+    },
+    {
+      "name": "Designknopf (Hell/Dunkel)",
+      "kind": "button",
+      "refersTo": "icon-button",
+      "description": "Runder 44-px-Knopf in Flächenfarbe; Mond und Sonne liegen übereinander und blenden mit Skalierung, Drehung und Unschärfe ineinander.",
+      "html": "<button class=\"ds-icon-btn\" type=\"button\" aria-pressed=\"false\"><svg class=\"ds-icon ds-icon-moon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1Z\"/></svg><svg class=\"ds-icon ds-icon-sun\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"4.2\"/><path d=\"M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6\"/></svg><span class=\"ds-sr\">Dunkles Design</span></button>",
+      "css": ".ds-icon-btn { position: relative; display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 999px; cursor: pointer; background: var(--surface, #ffffff); color: var(--ink, #111214); transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1), background-color 180ms ease; } .ds-icon { grid-area: 1 / 1; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: opacity 240ms cubic-bezier(0.23, 1, 0.32, 1), transform 240ms cubic-bezier(0.23, 1, 0.32, 1), filter 240ms cubic-bezier(0.23, 1, 0.32, 1); } .ds-icon-moon { fill: currentColor; stroke: none; } .ds-icon-sun { opacity: 0; transform: scale(0.6) rotate(-45deg); filter: blur(2px); } .ds-icon-btn[aria-pressed=\"true\"] .ds-icon-moon { opacity: 0; transform: scale(0.6) rotate(45deg); filter: blur(2px); } .ds-icon-btn[aria-pressed=\"true\"] .ds-icon-sun { opacity: 1; transform: none; filter: none; } @media (hover: hover) and (pointer: fine) { .ds-icon-btn:hover { background: var(--surface-3, #e2e5ea); } } .ds-icon-btn:active { transform: scale(0.95); } .ds-icon-btn:focus-visible { outline: 2px solid var(--focus, #111214); outline-offset: 3px; } .ds-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } @media (prefers-reduced-motion: reduce) { .ds-icon { transform: none !important; filter: none !important; transition: opacity 150ms ease; } .ds-icon-btn:active { transform: none; } }"
+    },
+    {
+      "name": "Zeitraum-Umschalter",
+      "kind": "input",
+      "refersTo": "segmented",
+      "description": "Drei Segmente auf heller Pillenspur; die Tinte-Pille des gewählten Felds gleitet per clip-path, Fläche und Schrift wandern gemeinsam.",
+      "html": "<fieldset class=\"ds-seg-wrap\"><legend class=\"ds-sr\">Zeitraum</legend><div class=\"ds-seg\"><input type=\"radio\" name=\"ds-range\" id=\"ds-r1\"><label for=\"ds-r1\">1&nbsp;Tag</label><input type=\"radio\" name=\"ds-range\" id=\"ds-r2\"><label for=\"ds-r2\">2&nbsp;Tage</label><input type=\"radio\" name=\"ds-range\" id=\"ds-r3\" checked><label for=\"ds-r3\">3&nbsp;Tage</label><span class=\"ds-seg-active\" aria-hidden=\"true\"><span>1&nbsp;Tag</span><span>2&nbsp;Tage</span><span>3&nbsp;Tage</span></span></div></fieldset>",
+      "css": ".ds-seg-wrap { border: 0; padding: 0; margin: 0; min-width: 0; } .ds-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } .ds-seg { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 4px; border-radius: 999px; background: var(--surface-2, #eceef1); min-width: min(100%, 300px); font-family: \"Hanken Grotesk\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-size: 1rem; } .ds-seg input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: -1px; pointer-events: none; } .ds-seg label { display: grid; place-items: center; min-height: 44px; padding: 0 14px; border-radius: 999px; font-weight: 600; color: var(--ink-2, #474a52); cursor: pointer; user-select: none; transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1), color 180ms ease; } @media (hover: hover) and (pointer: fine) { .ds-seg input:not(:checked) + label:hover { color: var(--ink, #111214); } } .ds-seg label:active { transform: scale(0.97); } .ds-seg-active { position: absolute; inset: 4px; z-index: 1; pointer-events: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-radius: 999px; background: var(--ink, #111214); color: var(--page, #f1f2f4); font-weight: 600; clip-path: inset(0 0 0 66.667% round 999px); transition: clip-path 240ms cubic-bezier(0.23, 1, 0.32, 1); } .ds-seg-active > span { display: grid; place-items: center; padding: 0 14px; } .ds-seg:has(#ds-r1:checked) .ds-seg-active { clip-path: inset(0 66.667% 0 0 round 999px); } .ds-seg:has(#ds-r2:checked) .ds-seg-active { clip-path: inset(0 33.333% 0 33.333% round 999px); } .ds-seg:has(#ds-r3:checked) .ds-seg-active { clip-path: inset(0 0 0 66.667% round 999px); } .ds-seg:has(input:focus-visible) { outline: 2px solid var(--focus, #111214); outline-offset: 2px; } @media (prefers-reduced-motion: reduce) { .ds-seg-active { transition: none; } .ds-seg label:active { transform: none; } }"
+    },
+    {
+      "name": "Kennzahl-Kachel",
+      "kind": "card",
+      "refersTo": "kpi-tile",
+      "description": "Weiße Kachel mit 18 px Radius: Beschriftung in Schiefer, Wert groß, Unterzeile klein und gedämpft.",
+      "html": "<div class=\"ds-tile\"><p class=\"ds-tile-label\">Jetzt (14:00 – 14:15 Uhr)</p><p class=\"ds-tile-value\"><span class=\"ds-nowrap\">1,2</span> <span class=\"ds-nowrap\">ct/kWh</span></p><p class=\"ds-tile-sub\">12 €/MWh</p></div>",
+      "css": ".ds-tile { background: var(--surface, #ffffff); color: var(--ink, #111214); border-radius: var(--radius-md, 18px); padding: 16px 18px; font-family: \"Hanken Grotesk\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-variant-numeric: tabular-nums; line-height: 1.5; } .ds-tile p { margin: 0; } .ds-tile-label { color: var(--ink-2, #474a52); } .ds-tile-value { margin-top: 2px !important; font-size: 1.75rem; font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; } .ds-nowrap { white-space: nowrap; } .ds-tile-sub { margin-top: 2px !important; font-size: 0.8125rem; color: var(--muted, #646872); }"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Informatives Kennzeichen als Pille (negativer Preis, Näherung); Warnung in Hinweisgelb. Nicht klickbar.",
+      "html": "<p class=\"ds-flags\"><span class=\"ds-chip\">negativer Preis</span><span class=\"ds-chip ds-chip-warn\">Datenlücke – Näherung (80 % der Werte)</span></p>",
+      "css": ".ds-flags { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; font-family: \"Hanken Grotesk\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; } .ds-chip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px; border-radius: 999px; font-size: 0.8125rem; font-weight: 600; background: var(--surface-2, #eceef1); color: var(--ink, #111214); } .ds-chip-warn { background: var(--warning-wash, #fdeec9); }"
+    },
+    {
+      "name": "Aufklappzeile",
+      "kind": "custom",
+      "refersTo": "disclosure",
+      "description": "Weiße Zeile mit 18 px Radius und Chevron für Datenquellen, Impressum, Datenschutz und Haftung; Hover in heller Tonstufe.",
+      "html": "<details class=\"ds-disclosure\"><summary><h3>Datenquellen</h3></summary><p>LadeRick greift ausschließlich auf öffentliche, regelmäßig aktualisierte Quellen zu.</p></details>",
+      "css": ".ds-disclosure { border-radius: var(--radius-md, 18px); background: var(--surface, #ffffff); color: var(--ink, #111214); font-family: \"Hanken Grotesk\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; line-height: 1.5; } .ds-disclosure > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; padding: 0 20px; border-radius: var(--radius-md, 18px); transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1), background-color 180ms ease; } .ds-disclosure > summary::-webkit-details-marker { display: none; } .ds-disclosure > summary::after { content: \"\"; flex: none; width: 8px; height: 8px; margin: 0 4px 3px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform 240ms cubic-bezier(0.23, 1, 0.32, 1); } .ds-disclosure > summary h3 { margin: 0; font-size: 1rem; font-weight: 650; letter-spacing: -0.01em; } .ds-disclosure[open] { padding-bottom: 20px; } .ds-disclosure[open] > summary { border-radius: var(--radius-md, 18px) var(--radius-md, 18px) 0 0; } .ds-disclosure[open] > summary::after { transform: translateY(3px) rotate(-135deg); } @media (hover: hover) and (pointer: fine) { .ds-disclosure > summary:hover { background: var(--surface-2, #eceef1); } } .ds-disclosure > summary:active { transform: scale(0.99); } .ds-disclosure > summary:focus-visible { outline: 2px solid var(--focus, #111214); outline-offset: 3px; } .ds-disclosure p { margin: 0.75rem 20px 0; line-height: 1.65; max-width: 72ch; } @media (prefers-reduced-motion: reduce) { .ds-disclosure > summary::after { transition: none; } .ds-disclosure > summary:active { transform: none; } }"
+    },
+    {
+      "name": "Kopfzeile",
+      "kind": "nav",
+      "refersTo": "brand-tile",
+      "description": "Markenkachel mit Blitz, Name und Tagline links, runder Designknopf rechts; kein Menü.",
+      "html": "<header class=\"ds-header\"><a class=\"ds-brand\" href=\"#\"><span class=\"ds-brand-tile\"><svg viewBox=\"0 0 32 32\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M18.5 2 6 18h8l-1.5 12L26 13h-8z\"/></svg></span><span class=\"ds-brand-text\"><span class=\"ds-brand-name\">LadeRick</span><span class=\"ds-tagline\">Börsenstrompreis für Deutschland</span></span></a><button class=\"ds-header-toggle\" type=\"button\" aria-pressed=\"false\" aria-label=\"Dunkles Design\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1Z\"/></svg></button></header>",
+      "css": ".ds-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; padding: 16px 0 4px; font-family: \"Hanken Grotesk\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; } .ds-brand { display: inline-flex; align-items: center; gap: 12px; min-width: 0; text-decoration: none; color: var(--ink, #111214); border-radius: 14px; } .ds-brand:focus-visible { outline: 2px solid var(--focus, #111214); outline-offset: 3px; } .ds-brand-tile { display: inline-grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 13px; background: var(--orange, #f08a2e); } .ds-brand-tile svg { width: 62%; height: 62%; fill: var(--orange-ink, #0b0b0b); } .ds-brand-text { display: grid; line-height: 1.15; } .ds-brand-name { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; } .ds-tagline { font-size: 0.8125rem; color: var(--muted, #646872); } .ds-header-toggle { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 999px; cursor: pointer; background: var(--surface, #ffffff); color: var(--ink, #111214); transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1), background-color 180ms ease; } .ds-header-toggle svg { width: 22px; height: 22px; fill: currentColor; } @media (hover: hover) and (pointer: fine) { .ds-header-toggle:hover { background: var(--surface-3, #e2e5ea); } } .ds-header-toggle:active { transform: scale(0.95); } .ds-header-toggle:focus-visible { outline: 2px solid var(--focus, #111214); outline-offset: 3px; }"
+    },
+    {
+      "name": "Preisdiagramm mit Fensterband",
+      "kind": "custom",
+      "refersTo": "chart-band",
+      "description": "Signatur: Stufenlinie, Vergangenheit als Tonfläche, deckendes oranges Fensterband mit dunkler Kante unter Gitter und Nulllinie, Fensterzeit darüber; das Band steigt beim ersten Zeichnen einmal auf.",
+      "html": "<figure class=\"ds-chart\"><svg viewBox=\"0 0 320 150\" role=\"img\" aria-label=\"Preisverlauf mit dem günstigsten kommenden Fenster 11–15 Uhr\"><rect class=\"ds-c-past\" x=\"40\" y=\"24\" width=\"110.5\" height=\"96\"/><path class=\"ds-c-area\" d=\"M150.5 80 H165 V60 H180 V50 H195 V75 H210 V95 H225 V110 H240 V105 H255 V70 H270 V40 H285 V55 H310 V120 H150.5 Z\"/><rect class=\"ds-c-band\" x=\"220\" y=\"24\" width=\"35\" height=\"96\"/><line class=\"ds-c-grid\" x1=\"40\" x2=\"310\" y1=\"24.5\" y2=\"24.5\"/><line class=\"ds-c-grid\" x1=\"40\" x2=\"310\" y1=\"48.5\" y2=\"48.5\"/><line class=\"ds-c-grid\" x1=\"40\" x2=\"310\" y1=\"72.5\" y2=\"72.5\"/><line class=\"ds-c-grid\" x1=\"40\" x2=\"310\" y1=\"96.5\" y2=\"96.5\"/><line class=\"ds-c-zero\" x1=\"40\" x2=\"310\" y1=\"120.5\" y2=\"120.5\"/><path class=\"ds-c-line-past\" d=\"M40 70 H55 V65 H70 V85 H85 V55 H100 V40 H115 V70 H130 V90 H150.5 V80\"/><path class=\"ds-c-line\" d=\"M150.5 80 H165 V60 H180 V50 H195 V75 H210 V95 H225 V110 H240 V105 H255 V70 H270 V40 H285 V55 H310\"/><path class=\"ds-c-line-cheapest\" d=\"M220 95 H225 V110 H240 V105 H255\"/><line class=\"ds-c-now\" x1=\"150.5\" x2=\"150.5\" y1=\"20\" y2=\"120\"/><circle class=\"ds-c-now-dot\" cx=\"150.5\" cy=\"80\" r=\"5\"/><text class=\"ds-c-anno\" x=\"156.5\" y=\"16\">jetzt</text><text class=\"ds-c-anno\" x=\"237.5\" y=\"16\" text-anchor=\"middle\">11–15 Uhr</text><text class=\"ds-c-axis\" x=\"34\" y=\"28.5\" text-anchor=\"end\">20</text><text class=\"ds-c-axis\" x=\"34\" y=\"52.5\" text-anchor=\"end\">15</text><text class=\"ds-c-axis\" x=\"34\" y=\"76.5\" text-anchor=\"end\">10</text><text class=\"ds-c-axis\" x=\"34\" y=\"100.5\" text-anchor=\"end\">5</text><text class=\"ds-c-axis\" x=\"34\" y=\"124.5\" text-anchor=\"end\">0</text><text class=\"ds-c-axis\" x=\"40\" y=\"138\" text-anchor=\"middle\">00</text><text class=\"ds-c-axis\" x=\"130\" y=\"138\" text-anchor=\"middle\">12</text><text class=\"ds-c-axis\" x=\"220\" y=\"138\" text-anchor=\"middle\">00</text><text class=\"ds-c-axis\" x=\"310\" y=\"138\" text-anchor=\"middle\">12</text></svg><ul class=\"ds-legend\"><li><span class=\"ds-sw ds-sw-past\"></span>Vergangene Preise</li><li><span class=\"ds-sw ds-sw-future\"></span>Kommende Preise (bereits bekannt)</li><li><span class=\"ds-sw ds-sw-cheapest\"></span>Günstigstes kommendes 4-h-Fenster</li></ul></figure>",
+      "css": ".ds-chart { margin: 0; padding: 20px; background: var(--surface, #ffffff); color: var(--ink, #111214); border-radius: var(--radius-lg, 24px); font-family: \"Hanken Grotesk\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-variant-numeric: tabular-nums; } .ds-chart svg { display: block; width: 100%; height: auto; overflow: visible; } .ds-c-past { fill: var(--past-wash, #f4f5f7); } .ds-c-area { fill: var(--future-area, rgba(17, 18, 20, 0.06)); } .ds-c-band { fill: var(--orange, #f08a2e); stroke: var(--band-edge, #b4560f); stroke-width: 1; shape-rendering: crispEdges; transform-box: fill-box; transform-origin: 50% 100%; animation: ds-band-rise 440ms cubic-bezier(0.23, 1, 0.32, 1) 140ms backwards; } @keyframes ds-band-rise { from { transform: scaleY(0); } to { transform: scaleY(1); } } @keyframes ds-fade-in { from { opacity: 0; } to { opacity: 1; } } .ds-c-grid { stroke: var(--grid, #e7e9ed); stroke-width: 1; shape-rendering: crispEdges; } .ds-c-zero { stroke: var(--axis, #8a8e96); stroke-width: 1; shape-rendering: crispEdges; } .ds-c-line-past { fill: none; stroke: var(--line-past, #80848c); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; } .ds-c-line { fill: none; stroke: var(--line-future, #111214); stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; } .ds-c-line-cheapest { fill: none; stroke: var(--orange-ink, #0b0b0b); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; animation: ds-fade-in 240ms ease 360ms backwards; } .ds-c-now { stroke: var(--ink, #111214); stroke-opacity: 0.35; stroke-width: 1; shape-rendering: crispEdges; } .ds-c-now-dot { fill: var(--ink, #111214); stroke: var(--surface, #ffffff); stroke-width: 3; } .ds-c-anno { fill: var(--ink, #111214); font-size: 0.8125rem; font-weight: 700; } .ds-c-axis { fill: var(--muted, #646872); font-size: 0.8125rem; } .ds-legend { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 0.8125rem; color: var(--ink-2, #474a52); } .ds-legend li { display: flex; align-items: center; gap: 8px; } .ds-sw { display: inline-block; width: 18px; flex: none; } .ds-sw-past { height: 3px; border-radius: 2px; background: var(--line-past, #80848c); } .ds-sw-future { height: 3px; border-radius: 2px; background: var(--line-future, #111214); } .ds-sw-cheapest { height: 12px; border-radius: 3px; background: var(--orange, #f08a2e); border: 1px solid var(--band-edge, #b4560f); } @media (prefers-reduced-motion: reduce) { .ds-c-band { animation: ds-fade-in 200ms ease backwards; } .ds-c-line-cheapest { animation: none; } }"
+    },
+    {
+      "name": "Diagramm-Tooltip",
+      "kind": "custom",
+      "refersTo": "tooltip",
+      "description": "Das einzige schwebende Element mit Schatten: Zeitraum, Preis groß, €/MWh und Kennzeichen; nur ab 720 px, darunter die Ablesezeile.",
+      "html": "<div class=\"ds-tooltip\" role=\"tooltip\"><div class=\"ds-tt-title\">Di., 29.09., 11:00–11:15 Uhr</div><div class=\"ds-tt-value\">1,4 ct/kWh</div><div class=\"ds-tt-tag\">14 €/MWh · günstigstes kommendes Fenster</div></div>",
+      "css": ".ds-tooltip { display: inline-block; background: var(--tooltip-bg, #ffffff); color: var(--ink, #111214); border-radius: var(--radius-sm, 12px); padding: 10px 12px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.14); font-family: \"Hanken Grotesk\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-size: 0.8125rem; line-height: 1.35; min-width: 160px; max-width: 240px; font-variant-numeric: tabular-nums; } .ds-tt-title, .ds-tt-tag { color: var(--ink-2, #474a52); } .ds-tt-value { font-size: 1.25rem; font-weight: 700; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Das orange Fenster",
+    "overview": "LadeRick ist eine saubere Energiepreis-App im Standard ihrer Kategorie: ruhige, neutral-kühle Flächen, auf denen genau eine Sache leuchtet – das günstigste kommende Ladefenster. Es erscheint zweimal in derselben Farbe: oben als orange Antwortfläche mit Tag, Uhrzeit und Preis, darunter als oranges Band in der Preiskurve, an dem sich die Antwort prüfen lässt. Alles andere – Kennzahlen, Rückblick, Tabelle, Erklärtexte – ordnet sich in Weiß, kühlem Grau und fast schwarzer Tinte darunter ein.\n\nDie Dichte ist die eines Werkzeugs für den kurzen Blick am Handy, das am Desktop zum genauen Lesen der Kurve einlädt. Große Radien, Tonstufen statt Linien und Schatten, runde Bedienelemente und eine einzige Schrift, Hanken Grotesk, mit tabellarischen Ziffern. Bewegung ist knapp und funktional: Die Bühne setzt sich einmal, das Fensterband steigt einmal auf, der Zeitraum-Umschalter gleitet; danach ist die Seite still. Hell und dunkel tragen dieselben Rollen – dunkel ist tiefes Anthrazit –, und die Antwortfläche bleibt in beiden Designs orange mit dunkler Schrift.\n\nBestätigte Absagen: nicht technisch-kalt wie ein Börsenterminal, nicht werblich wie eine Verkaufsseite. Die Seite trägt derzeit keine Fotos oder Illustrationen; das Bild ist die Kurve. Das ist der Stand der Umsetzung, keine Regel – frei lizenzierte Bilder mit Quellenangabe sind erlaubt, waren beim Bau aber nicht erreichbar, und nichts wurde erfunden.",
+    "keyCharacteristics": [
+      "Eine Akzentfarbe, Ladeorange, ausschließlich für das günstigste kommende Fenster und das Markenzeichen.",
+      "Neutral-kühler heller Grund, weiße Flächen mit 24/18/12 px Radius, Trennung durch Tonstufen statt Rahmen.",
+      "Flach in Ruhe; der Diagramm-Tooltip ist das einzige schwebende Element mit Schatten.",
+      "Hanken Grotesk in fünf Größen, tabellarische Ziffern auf der ganzen Seite.",
+      "Runde Bedienelemente (Pillen, mindestens 44 px hoch); Interaktion in Tinte, nie in Orange.",
+      "Bewegung einmalig beim ersten Zeichnen, nur über transform und clip-path, mit Ausweichpfad bei reduzierter Bewegung."
+    ],
+    "rules": [
+      {
+        "name": "Die Ein-Orange-Regel",
+        "body": "Orange bedeutet „das günstigste kommende Fenster“ und, als Markenkachel, LadeRick selbst. Es färbt nie einen Knopf, Link, Hover, Fokus, das gewählte Segment oder eine Statusmeldung; Interaktion ist Tinte.",
+        "section": "colors"
+      },
+      {
+        "name": "Die Volles-Band-Regel",
+        "body": "Das Fensterband im Diagramm ist deckendes Ladeorange – eine bewusste Abweichung von der Dataviz-Regel, große Flächen nur als Tönung von etwa 10 % zu zeigen. Grund: Band und Antwortfläche sind dieselbe Aussage in derselben Farbe; wer oben die Uhrzeit gelesen hat, findet das Fenster in der Kurve ohne Suchen. Die Abweichung gilt nur zusammen mit ihren Ausgleichen: Gitter- und Nulllinie liegen über dem Band, die Kurve läuft im Band in Orange-Tinte weiter, die Bandkante ist dunkler (Gebrannte Kante, 4,91:1 gegen Weiß), die Fensterzeit steht als Beschriftung über der Plotfläche, das Legendenfeld trägt dieselbe Kante, und die Tabellenzeilen des Fensters sind orange markiert. Wer das Band übernimmt, übernimmt alle Ausgleiche.",
+        "section": "colors"
+      },
+      {
+        "name": "Die Tonstufen-Regel",
+        "body": "Flächen trennen sich durch Helligkeit – Seitengrund, Weiß, helle und tiefere Tonstufe –, nie durch Rahmen. Linien gibt es nur als Datenlinien im Gitterton: Diagrammgitter, Zeitachse, Tabellenzeilen. Im Hochkontrastmodus erhalten Flächen Umrisse in Systemfarbe; das ist Zugänglichkeit, kein Stil.",
+        "section": "colors"
+      },
+      {
+        "name": "Die Fünf-Größen-Regel",
+        "body": "Fünf Stufen, keine sechste: 13 px, 16/17 px, 20 px, 28/32 px und die fluide Antwortzeit. Neue Hierarchie entsteht über Gewicht oder Tintenstufe (Fast-Schwarz, Schiefer, Gedämpftes Grau), nicht über eine neue Größe.",
+        "section": "typography"
+      },
+      {
+        "name": "Die Tabellenziffern-Regel",
+        "body": "Tabellarische Ziffern gelten seitenweit: Preise, Uhrzeiten und Achsen stehen bündig und springen beim Aktualisieren nicht. Negative Werte tragen das typografische Minus (−), keinen Bindestrich.",
+        "section": "typography"
+      },
+      {
+        "name": "Die Zusammenhalt-Regel",
+        "body": "Beginn und Ende einer Zeitspanne sowie Zahl und Einheit bleiben je beisammen; bei wenig Platz oder großer Schrift bricht die Zeile nur zwischen diesen Teilen. Lange deutsche Komposita dürfen umbrechen, statt seitlich hinauszulaufen.",
+        "section": "typography"
+      },
+      {
+        "name": "Die Große-Schrift-Regel",
+        "body": "Kachelraster und Ablesezeile richten sich nach der verfügbaren Breite in em (Container-Abfragen), nicht nach Viewport-Pixeln: Bei vergrößerter Schrift stapeln sich Kennzahlen von selbst, Einheiten rutschen unter ihre Zahl, nichts läuft seitlich hinaus.",
+        "section": "layout"
+      },
+      {
+        "name": "Die Flach-in-Ruhe-Regel",
+        "body": "Keine Schatten, Verläufe oder Rahmen an ruhenden Flächen. Ein Schatten nur für das, was wirklich schwebt – derzeit allein der Tooltip.",
+        "section": "elevation"
+      },
+      {
+        "name": "Die Stufenlinien-Regel",
+        "body": "Preise gelten je Viertelstunde oder Stunde fest und werden als Stufen gezeichnet, nie geglättet. Das Fensterband beginnt nie links der Jetzt-Linie.",
+        "section": "shapes"
+      },
+      {
+        "name": "Die Einmal-Regel",
+        "body": "Bewegung läuft einmal, beim ersten Zeichnen mit Daten: Die Bühne setzt sich, die Kennzahlen folgen, das Fensterband steigt auf. Minütliche Neuberechnungen und das Umschalten des Designs bleiben still, und jede Bewegung hat einen Pfad für reduzierte Bewegung (keine Verschiebung, kein Druckeffekt, keine Übergänge an Umschalter und Chevrons, Designsymbole nur per Deckkraft).",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "**Do** Ladeorange (#f08a2e) nur für das günstigste kommende Fenster und das Markenzeichen einsetzen; Text darauf ist immer Orange-Tinte (#0b0b0b), in hell wie dunkel.",
+      "**Do** das Fensterband deckend zeichnen und dabei alle Ausgleiche der Volles-Band-Regel mitnehmen: Gitter darüber, Gebrannte Kante (#b4560f), Fensterzeit über der Plotfläche, Legendenfeld mit Kante, Orange-Hauch in der Tabelle.",
+      "**Do** Flächen über Tonstufen trennen (Seitengrund #f1f2f4, Weiß #ffffff, Tonstufen #eceef1 und #e2e5ea) und Radien von außen nach innen staffeln (24 → 18 → 12 px).",
+      "**Do** Bedienelemente als Pillen mit mindestens 44 px Höhe bauen und Druck mit 0.97 zeigen (breite Zeilen 0.99, der kleine runde Knopf 0.95), 140 ms.",
+      "**Do** Text in hell und dunkel auf mindestens 4,5:1 prüfen, bedeutungstragende Grafik (Kurven, Bandkante, Legendenfelder) auf mindestens 3:1 gegen ihre Fläche.",
+      "**Do** für jede neue Bewegung einen Pfad bei reduzierter Bewegung vorsehen und nur transform, opacity oder clip-path animieren.",
+      "**Do** Preise als Stufenlinie mit tabellarischen Ziffern und typografischem Minus zeigen."
+    ],
+    "donts": [
+      "**Don't** Orange für Knöpfe, Links, Hover, Fokus, das gewählte Segment oder Statusmeldungen verwenden – Interaktion ist Tinte.",
+      "**Don't** Karten, Kacheln oder Aufklappzeilen mit Rahmen, Schatten oder Verläufen versehen; der Schwebeschatten gehört allein dem Tooltip.",
+      "**Don't** eine sechste Schriftgröße oder eine zweite Schriftfamilie einführen.",
+      "**Don't** die Kurve glätten oder das Fensterband links der Jetzt-Linie beginnen lassen.",
+      "**Don't** Werte beim Eingang ein- oder ausblenden oder bei Neuberechnungen erneut animieren; Inhalte sind ab dem ersten Bild lesbar.",
+      "**Don't** technisch-kalt wie ein Börsenterminal oder werblich wie eine Verkaufsseite werden."
+    ]
+  }
+}

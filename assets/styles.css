@@ -34,7 +34,7 @@
   --orange-ink: #0b0b0b;
   --orange-ink-2: rgba(11, 11, 11, 0.74);
   --orange-wash: rgba(240, 138, 46, 0.16);
-  --band-edge: #b4560f; /* Kante des Fensterbands: 3:1 gegen helle Flächen */
+  --band-edge: #b4560f; /* Kante des Fensterbands: 4,9:1 gegen Weiß (Nicht-Text-Kontrast ≥ 3:1) */
   --tooltip-bg: var(--surface);
   --critical: #c42b2b;
   --warning-wash: #fdeec9;
