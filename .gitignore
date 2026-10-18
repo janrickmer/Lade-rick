@@ -4,3 +4,8 @@ data/prices.json
 .DS_Store
 *.log
 tests/fixtures/*.json
+# Arbeitsdateien der Design-Werkzeuge (Skizzen, Screenshots, Prüfberichte)
+.impeccable/mocks/
+.impeccable/review/
+.impeccable/build/
+.taste-skill/
