@@ -509,12 +509,13 @@ export class PriceChart {
     this.tooltip.style.left = `${Math.max(0, left)}px`;
     this.tooltip.style.top = `${Math.max(0, Math.min(cy - 20, this.layout.height - 80))}px`;
 
-    // Ablesezeile (Mobil, eine Zeile: Tag, Uhrzeit, Preis, Kennzeichen; Langform in Tooltip und Screenreader-Ausgabe)
+    // Ablesezeile (Mobil): Preis zuerst, dann Tag und Uhrzeit, Kennzeichen nur „günstig“/„jetzt“ („kommend“ zeigt die
+    // Kurve selbst); Langform in Tooltip und Screenreader-Ausgabe
     if (this.readout) {
       const strong = document.createElement('strong');
       strong.textContent = info.ct;
-      const tags = info.tags.map((t) => (t === CHEAPEST_TAG ? 'günstig' : t));
-      this.readout.replaceChildren(`${compactSlot(p)} · `, strong, tags.length ? ` · ${tags.join(', ')}` : '');
+      const tags = info.tags.filter((t) => t !== 'kommend').map((t) => (t === CHEAPEST_TAG ? 'günstig' : t));
+      this.readout.replaceChildren(strong, ` · ${compactSlot(p)}${tags.length ? ` · ${tags.join(', ')}` : ''}`);
     }
     if (this.output) this.output.textContent = info.text;
   }
@@ -527,7 +528,7 @@ export class PriceChart {
     if (!cur) { this.readout.textContent = '\u00a0'; return; }
     const strong = document.createElement('strong');
     strong.textContent = formatCt(cur.price);
-    this.readout.replaceChildren(`Jetzt ${formatTime(cur.start)}–${formatEndTime(cur.end)} · `, strong);
+    this.readout.replaceChildren(strong, ` · jetzt ${formatTime(cur.start)}–${formatEndTime(cur.end)}`);
   }
 
   clearSelection() {

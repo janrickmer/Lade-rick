@@ -296,7 +296,7 @@ export function renderChartMeta({ points, view, resolutionMinutes, supplements, 
     const when = `${word ?? `am ${formatDateShort(upcoming.start)}`}, ${formatTimeRange(upcoming.start, upcoming.end)}`;
     text = `Das günstigste kommende Fenster (${when}) liegt außerhalb dieses Zeitraums.${view?.label === 'Heute' ? ' „2 Tage“ zeigt es.' : ''}`;
   } else if (view?.label && !view.tomorrowKnown) {
-    text = 'Die Preise für morgen erscheinen täglich gegen 13 Uhr.';
+    text = TOMORROW_HINT;
   }
   // role="status": nur bei Änderung schreiben, sonst würde der Hinweis bei jeder Neuberechnung erneut vorgelesen
   if (hint.textContent !== text) hint.textContent = text;
@@ -370,10 +370,16 @@ export function renderTable({ points, view, cheapest, now }) {
     }
     tdTime.appendChild(time);
     if (markShort) {
-      // am Handy statt der Spalte „Markierung“ (dort ausgeblendet)
+      // am Handy statt der Spalte „Markierung“ (dort ausgeblendet); vorgelesen wird die Langform
       const chip = document.createElement('span');
       chip.className = 't-mark';
-      chip.textContent = markShort;
+      const shortText = document.createElement('span');
+      shortText.setAttribute('aria-hidden', 'true');
+      shortText.textContent = markShort;
+      const longText = document.createElement('span');
+      longText.className = 'sr-only';
+      longText.textContent = mark;
+      chip.append(shortText, longText);
       tdTime.append(' ', chip);
     }
     const tdCt = document.createElement('td');
@@ -432,6 +438,9 @@ export function renderStatusMeta({ series, now, knownUntil }) {
   el.textContent = `${parts.join(' · ')}.`;
 }
 
+/** Regulärer Hinweis vor 13 Uhr – steht sichtbar neben dem Zeitraum-Umschalter, oben nur für Screenreader. */
+export const TOMORROW_HINT = 'Die Preise für morgen erscheinen täglich gegen 13 Uhr.';
+
 /** Nachricht nach erfolgreichem Laden (Fallback, Zwischenspeicher, Hinweis auf 13 Uhr). */
 export function statusAfterLoad({ series, attempts, now, knownUntil }) {
   const failed = attempts.filter((a) => !a.ok && a.id !== 'snapshot' && a.role !== 'supplement').map((a) => a.id);
@@ -445,7 +454,7 @@ export function statusAfterLoad({ series, attempts, now, knownUntil }) {
   }
   if (knownUntil) {
     const tomorrowKnown = berlinParts(knownUntil - 1).ymd > berlinParts(now).ymd;
-    if (!tomorrowKnown && knownUntil >= expectedCoverageEnd(now)) msgs.push('Die Preise für morgen erscheinen täglich gegen 13 Uhr.');
+    if (!tomorrowKnown && knownUntil >= expectedCoverageEnd(now)) msgs.push(TOMORROW_HINT);
     else if (!tomorrowKnown) msgs.push(`Die Preise für morgen sind noch nicht verfügbar – LadeRick prüft alle ${config.refreshMinutesAwaiting} Minuten erneut.`);
   }
   return msgs.join(' ');

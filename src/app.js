@@ -128,7 +128,7 @@ function render({ fromCache = false, notBefore = 0 } = {}) {
     resolutionMinutes: series.resolutionMinutes,
   });
   ui.hideError();
-  if (!fromCache) ui.setStatusMessage(ui.statusAfterLoad({ series, attempts, now, knownUntil }));
+  if (!fromCache) showLoadStatus({ series, attempts, now, knownUntil });
 
   window.__LADERICK__ = { series, result, upcoming, startTime, current, attempts, now, fromCache, viewDays: state.viewDays, viewStart: view.viewStart, viewEnd: view.viewEnd, viewLabel: view.label, nextLoadAt: state.nextLoadAt };
   document.dispatchEvent(new CustomEvent('laderick:rendered', { detail: window.__LADERICK__ }));
@@ -141,6 +141,12 @@ function render({ fromCache = false, notBefore = 0 } = {}) {
   state.renderPerf = performance.now();
   state.shownUpcomingStart = upcoming ? upcoming.start : null;
   scheduleBoundaryRender(now);
+}
+
+/** Statuszeile nach dem Laden; der reguläre Hinweis auf 13 Uhr steht schon neben dem Umschalter und bleibt oben still. */
+function showLoadStatus(ctx) {
+  const msg = ui.statusAfterLoad(ctx);
+  ui.setStatusMessage(msg, { quiet: msg === ui.TOMORROW_HINT });
 }
 
 /**
@@ -188,7 +194,7 @@ async function load({ force = false } = {}) {
         state.attempts = Array.isArray(cached.attempts) ? cached.attempts : [];
         state.lastFetchAt = cached.savedAt;
         render({ fromCache: true });
-        ui.setStatusMessage(ui.statusAfterLoad({ series: cached.series, attempts: state.attempts, now, knownUntil: cached.series.points.at(-1)?.end ?? null }));
+        showLoadStatus({ series: cached.series, attempts: state.attempts, now, knownUntil: cached.series.points.at(-1)?.end ?? null });
         // Frisch nur, solange weder die Cache-Dauer abgelaufen noch ein früherer Abruf fällig ist – fehlen z. B. nach
         // 12:55 Uhr die Preise für morgen, wird nach wenigen Minuten neu abgefragt statt erst nach 10 Minuten.
         const freshUntil = Math.min(cached.savedAt + config.cacheTtlMinutes * MINUTE, nextRefreshAt(cached.series, cached.savedAt, now));
@@ -258,9 +264,10 @@ async function fetchAndRender(now) {
       if (a.ok || state.series || a.role === 'supplement') return;
       const idx = order.indexOf(a.id);
       const next = order[idx + 1];
+      // still, solange noch nichts angezeigt wird (kein Layoutsprung); nach dem Laden meldet statusAfterLoad den Ausfall
       ui.setStatusMessage(next
         ? `${ui.shortName(a.id)} antwortet nicht – versuche ${ui.shortName(next)} …`
-        : `${ui.shortName(a.id)} antwortet nicht.`);
+        : `${ui.shortName(a.id)} antwortet nicht.`, { quiet: true });
     },
   });
   ui.setRefreshing(false);

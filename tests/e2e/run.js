@@ -80,7 +80,7 @@ await scenario('Standardfall: SMARD liefert, Hero/Ausblick/Kennzahlen/Chart/Tabe
   assert.ok(bKpi.y < bChart.y && bKpi.x > bOutlook.x + bOutlook.width - 1, 'Kennzahlen stehen neben der Antwort');
   assert.equal(await page.locator('#range-3').isChecked(), true);
   assert.equal(await text(page, '#chart-subtitle'), 'Gestern bis morgen · So., 27.09., 00:00 – Di., 29.09., 24:00 Uhr · 15-Minuten-Werte');
-  assert.equal(await page.locator('#range-hint').isHidden(), true, 'kein Hinweis, wenn die Preise für morgen bekannt sind');
+  assert.equal(await text(page, '#range-hint'), '', 'kein Hinweis, wenn die Preise für morgen bekannt sind');
   assert.equal(await page.locator('#hero [data-field="empty"]').isHidden(), true);
   assert.equal(await page.locator('#hero').getAttribute('data-state'), 'ready');
 
@@ -350,14 +350,15 @@ await scenario('Mobil (360 px): kein horizontales Scrollen, Achsenlabels ohne Ü
   }
   await page.locator('#chart').scrollIntoViewIfNeeded();
   // Ohne Auswahl zeigt die Ablesezeile den aktuellen Preis
-  assert.match(await text(page, '#chart-readout'), /^Jetzt 14:00–14:15 · .* ct\/kWh$/);
+  assert.match(await text(page, '#chart-readout'), /^.+ ct\/kWh · jetzt 14:00–14:15$/);
+  const chartTop = await page.locator('#chart').evaluate((el) => el.getBoundingClientRect().top);
   await page.locator('#chart .hit-area').hover({ position: { x: 150, y: 100 } });
-  await page.waitForFunction(() => !document.querySelector('#chart-readout').textContent.startsWith('Jetzt'));
+  await page.waitForFunction(() => !/· jetzt \d/.test(document.querySelector('#chart-readout').textContent));
   assert.equal(await page.locator('.chart-tooltip').isVisible(), false);
-  assert.match(await text(page, '#chart-readout'), /^\S+ \d\d:\d\d–\d\d:\d\d · .* ct\/kWh/);
-  // Ablesezeile bleibt einzeilig (kein Sprung des Diagramms)
-  const lh = await page.locator('#chart-readout').evaluate((el) => [el.getBoundingClientRect().height, parseFloat(getComputedStyle(el).lineHeight)]);
-  assert.ok(lh[0] <= lh[1] + 1, `Ablesezeile höher als eine Zeile: ${lh}`);
+  // Preis zuerst, dann Tag und Uhrzeit
+  assert.match(await text(page, '#chart-readout'), /^.+ ct\/kWh · \S+ \d\d:\d\d–\d\d:\d\d/);
+  // feste Höhe: das Diagramm springt nicht
+  assert.equal(await page.locator('#chart').evaluate((el) => el.getBoundingClientRect().top), chartTop, 'Diagramm springt');
   await page.screenshot({ path: resolve(SHOTS, 'mobile-light.png'), fullPage: true });
 }, { viewport: { width: 360, height: 780 } });
 
@@ -452,19 +453,19 @@ await scenario('Touch: Tippen auf das Diagramm zeigt den getippten Slot in der A
   await page.locator('#chart').scrollIntoViewIfNeeded();
   const box = await page.locator('#chart .hit-area').boundingBox();
   await page.touchscreen.tap(box.x + 20, box.y + 60);
-  await page.waitForFunction(() => /^So\.? /.test(document.querySelector('#chart-readout').textContent));
+  await page.waitForFunction(() => /ct\/kWh · So\.? /.test(document.querySelector('#chart-readout').textContent));
   const first = await text(page, '#chart-readout');
-  assert.match(first, /^So\.? 0\d:/, first);
+  assert.match(first, /ct\/kWh · So\.? 0\d:/, first);
   await page.waitForTimeout(150);
   assert.equal(await text(page, '#chart-readout'), first, 'Auswahl bleibt nach dem Tippen erhalten');
   const box2 = await page.locator('#chart .hit-area').boundingBox();
   await page.touchscreen.tap(box2.x + box2.width - 20, box2.y + 60);
-  await page.waitForFunction(() => /^Di\.? (1[0-9]|2[0-3]):/.test(document.querySelector('#chart-readout').textContent));
+  await page.waitForFunction(() => /ct\/kWh · Di\.? (1[0-9]|2[0-3]):/.test(document.querySelector('#chart-readout').textContent));
   await page.waitForTimeout(150);
-  assert.match(await text(page, '#chart-readout'), /^Di\.? (1[0-9]|2[0-3]):.*kommend/);
+  assert.doesNotMatch(await text(page, '#chart-readout'), /kommend/, '„kommend“ zeigt die Kurve selbst');
   // Tippen außerhalb des Diagramms hebt die Auswahl auf: zurück zum aktuellen Preis
   await page.touchscreen.tap(20, 20);
-  await page.waitForFunction(() => document.querySelector('#chart-readout').textContent.startsWith('Jetzt'));
+  await page.waitForFunction(() => /· jetzt \d/.test(document.querySelector('#chart-readout').textContent));
   // Wischen über ein Neuzeichnen hinweg und Loslassen außerhalb: Das Diagramm reagiert danach weiter auf Tippen
   const cdp = await page.context().newCDPSession(page);
   const b = await page.locator('#chart .hit-area').boundingBox();
@@ -475,7 +476,34 @@ await scenario('Touch: Tippen auf das Diagramm zeigt den getippten Slot in der A
   await touch('touchMove', b.x + 120, b.y - 200);
   await touch('touchEnd');
   await page.touchscreen.tap(b.x + b.width - 20, b.y + 60);
-  await page.waitForFunction(() => /^Di\.? /.test(document.querySelector('#chart-readout').textContent));
+  await page.waitForFunction(() => /ct\/kWh · Di\.? /.test(document.querySelector('#chart-readout').textContent));
+}, { viewport: { width: 360, height: 780 }, hasTouch: true });
+
+await scenario('Große Schrift (150 %, 360 px): Ablesezeile schneidet nichts ab, Diagrammkopf ohne Überdeckung', async (page) => {
+  await mockSources(page, {});
+  await page.goto(url());
+  await waitForRender(page);
+  await page.evaluate(() => { document.documentElement.style.fontSize = '150%'; });
+  await page.waitForTimeout(200);
+  await page.locator('#chart').scrollIntoViewIfNeeded();
+  const box = await page.locator('#chart .hit-area').boundingBox();
+  for (const fx of [0.1, 0.5, 0.95]) {
+    await page.touchscreen.tap(box.x + box.width * fx, box.y + 40);
+    const m = await page.locator('#chart-readout').evaluate((el) => {
+      const s = el.querySelector('strong').getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      return { inside: s.right <= r.right + 0.5 && s.bottom <= r.bottom + 0.5, sw: el.scrollWidth, cw: el.clientWidth };
+    });
+    assert.ok(m.inside && m.sw <= m.cw + 1, `Ablesezeile abgeschnitten: ${JSON.stringify(m)}`);
+  }
+  const head = await page.evaluate(() => {
+    const t = document.querySelector('#chart-title').getBoundingClientRect();
+    const l = document.querySelector('#table-link').getBoundingClientRect();
+    return t.right <= l.left + 0.5 || l.top >= t.bottom - 1;
+  });
+  assert.ok(head, '„Preisverlauf“ und „Als Tabelle“ überdecken sich');
+  const [sw, iw] = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
+  assert.equal(sw, iw, 'kein horizontaler Überlauf bei 150 % Schrift');
 }, { viewport: { width: 360, height: 780 }, hasTouch: true });
 
 await scenario('Fensterzeit über dem Band bleibt am Handy im Diagramm, auch wenn das Fenster direkt nach „jetzt“ beginnt', async (page) => {
