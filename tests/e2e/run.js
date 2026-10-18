@@ -86,6 +86,10 @@ await scenario('Standardfall: SMARD liefert, Hero/Ausblick/Kennzahlen/Chart/Tabe
 
   const uw = formatWindow(expectedUpcoming.start, expectedUpcoming.end, { now: REFERENCE_NOW });
   assert.equal(await text(page, '#outlook [data-field="time"]'), uw.main.replace(/\s+/g, ' '));
+  assert.equal(await page.locator('#outlook .answer-time .t-part').count(), 2);
+  assert.equal(await text(page, '#outlook .answer-time .time-unit'), 'Uhr');
+  // Band im Diagramm trägt die Uhrzeit des Fensters (verbindet Antwort und Kurve)
+  assert.match(await text(page, '#chart svg .band-label'), /^\d{1,2}(:\d\d)?–\d{1,2}(:\d\d)? Uhr$/);
   assert.equal(await text(page, '#outlook [data-field="headline"]'), 'Am günstigsten laden Sie morgen, Di., 29.09.');
   assert.equal(await text(page, '#outlook [data-field="known"]'), 'Bekannte Preise bis Di., 29.09., 24:00 Uhr.');
   assert.match(await text(page, '#outlook [data-field="starts"]'), /^Beginnt in /);
@@ -318,6 +322,12 @@ await scenario('Chart-Interaktion: Hover-Tooltip, Tastaturnavigation, Screenread
   assert.match(out, /^Mo\., 28\.09\., 13:45 – 14:00 Uhr: .* ct\/kWh \(.* €\/MWh\)/);
   await page.keyboard.press('Home');
   assert.match(await text(page, '#chart-output'), /^So\., 27\.09\., 00:00 – 00:15 Uhr/);
+  await page.keyboard.press('PageUp');
+  assert.match(await text(page, '#chart-output'), /^So\., 27\.09\., 01:00 – 01:15 Uhr/, 'Bild auf: eine Stunde weiter');
+  await page.keyboard.press('Shift+PageUp');
+  assert.match(await text(page, '#chart-output'), /^Mo\., 28\.09\., 01:00 – 01:15 Uhr/, 'Umschalt+Bild auf: ein Tag weiter');
+  await page.keyboard.press('g');
+  assert.match(await text(page, '#chart-output'), /günstigstes kommendes Fenster$/, 'G springt zum günstigsten Fenster');
   await page.keyboard.press('End');
   assert.match(await text(page, '#chart-output'), /^Di\., 29\.09\., 23:45 – 24:00 Uhr.*kommend/);
   await page.keyboard.press('Escape');
@@ -339,10 +349,12 @@ await scenario('Mobil (360 px): kein horizontales Scrollen, Achsenlabels ohne Ü
     assert.ok(row.length >= 2, `zu wenige ${cls}`);
   }
   await page.locator('#chart').scrollIntoViewIfNeeded();
+  // Ohne Auswahl zeigt die Ablesezeile den aktuellen Preis
+  assert.match(await text(page, '#chart-readout'), /^Jetzt, 14:00 – 14:15 Uhr · .* ct\/kWh$/);
   await page.locator('#chart .hit-area').hover({ position: { x: 150, y: 100 } });
-  await page.waitForFunction(() => document.querySelector('#chart-readout').textContent.includes('ct/kWh'));
+  await page.waitForFunction(() => !document.querySelector('#chart-readout').textContent.startsWith('Jetzt'));
   assert.equal(await page.locator('.chart-tooltip').isVisible(), false);
-  assert.match(await text(page, '#chart-readout'), /Uhr · .* ct\/kWh · .* €\/MWh/);
+  assert.match(await text(page, '#chart-readout'), /Uhr · .* ct\/kWh/);
   await page.screenshot({ path: resolve(SHOTS, 'mobile-light.png'), fullPage: true });
 }, { viewport: { width: 360, height: 780 } });
 
@@ -437,7 +449,7 @@ await scenario('Touch: Tippen auf das Diagramm zeigt den getippten Slot in der A
   await page.locator('#chart').scrollIntoViewIfNeeded();
   const box = await page.locator('#chart .hit-area').boundingBox();
   await page.touchscreen.tap(box.x + 20, box.y + 60);
-  await page.waitForFunction(() => document.querySelector('#chart-readout').textContent.includes('ct/kWh'));
+  await page.waitForFunction(() => /^So\./.test(document.querySelector('#chart-readout').textContent));
   const first = await text(page, '#chart-readout');
   assert.match(first, /^So\., 27\.09\., 0\d:/, first);
   await page.waitForTimeout(150);
@@ -447,6 +459,9 @@ await scenario('Touch: Tippen auf das Diagramm zeigt den getippten Slot in der A
   await page.waitForFunction(() => /Di\., 29\.09\., (1[0-9]|2[0-3]):/.test(document.querySelector('#chart-readout').textContent));
   await page.waitForTimeout(150);
   assert.match(await text(page, '#chart-readout'), /Di\., 29\.09\., (1[0-9]|2[0-3]):.*kommend/);
+  // Tippen außerhalb des Diagramms hebt die Auswahl auf: zurück zum aktuellen Preis
+  await page.touchscreen.tap(20, 20);
+  await page.waitForFunction(() => document.querySelector('#chart-readout').textContent.startsWith('Jetzt'));
 }, { viewport: { width: 360, height: 780 }, hasTouch: true });
 
 await scenario('Kleines Display (320 px): Kennzahlen bleiben einzeilig, kein Überlauf', async (page) => {
@@ -581,6 +596,7 @@ await scenario('Zeitraum-Umschalter in Kalendertagen: 1/2/3 Tage, Auswahl wird g
   assert.equal(await page.locator('#chart svg .now-line').count(), 1);
   assert.equal(await page.locator('#chart svg .band-cheapest').count(), 0, 'kommendes Fenster liegt morgen, außerhalb der Tagesansicht');
   assert.equal(await page.locator('#legend-cheapest').isHidden(), true, 'Legende ohne oranges Band ausgeblendet');
+  assert.match(await text(page, '#range-hint'), /^Das günstigste kommende Fenster \(morgen, .* Uhr\) liegt außerhalb dieses Zeitraums\. „2 Tage“ zeigt es\.$/);
   assert.equal(await page.evaluate(() => localStorage.getItem('laderick:days')), '1');
 
   await page.locator('label[for="range-2"]').click();

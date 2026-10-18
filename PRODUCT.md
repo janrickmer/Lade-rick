@@ -24,7 +24,7 @@ aktueller Preis, Minimum und Maximum. Erfolg heißt: Die Antwort ist in Sekunden
 
 ## Positioning
 
-- Zeigt ausschließlich feste Auktionsergebnisse, keine Prognosen; das grün markierte Fenster hat garantiert noch nicht
+- Zeigt ausschließlich feste Auktionsergebnisse, keine Prognosen; das orange markierte Fenster hat garantiert noch nicht
   begonnen.
 - Seriöse, offen genannte Quellen mit Fallback-Kette (SMARD.de der Bundesnetzagentur, Energy-Charts, aWATTar,
   serverseitiger Zwischenspeicher); fehlende Folgetagspreise werden aus aWATTar ergänzt und gekennzeichnet.

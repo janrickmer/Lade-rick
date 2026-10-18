@@ -63,13 +63,11 @@
       <article id="outlook" class="answer reveal" data-reveal="0" aria-labelledby="outlook-title" data-state="loading">
         <h2 id="outlook-title" class="answer-title" data-field="headline">Günstigstes 4-Stunden-Fenster</h2>
         <p class="answer-time" data-field="time">&nbsp;</p>
-        <p class="answer-price">ca. <strong class="answer-ct" data-field="ct">&nbsp;</strong> im Mittel <span class="answer-mwh" data-field="mwh"></span></p>
-        <p class="answer-starts" data-field="starts"></p>
+        <p class="answer-price">ca. <strong class="answer-ct" data-field="ct">&nbsp;</strong> im Mittel<span class="answer-starts" data-field="starts"></span></p>
         <p class="flags" data-field="flags"></p>
         <p class="answer-meta" data-field="note"></p>
         <p class="answer-empty" data-field="empty" hidden></p>
-        <p class="answer-foot">Feste, bereits veröffentlichte Börsenpreise – keine Prognose. Berücksichtigt werden nur Fenster, die
-          noch nicht begonnen haben.<span data-field="known"></span></p>
+        <p class="answer-foot"><span class="answer-mwh" data-field="mwh"></span>Feste, bereits veröffentlichte Börsenpreise – keine Prognose.<span class="sr-only" data-field="known"></span></p>
         <details class="answer-details" id="startzeit">
           <summary><h3>Beste Ladezeit der letzten Tage</h3></summary>
           <p data-field="st-text" hidden></p>
@@ -77,7 +75,54 @@
         </details>
       </article>
 
-      <section class="kpis reveal" data-reveal="1" aria-label="Kennzahlen">
+
+      <section class="card card-chart reveal" data-reveal="1" aria-labelledby="chart-title" id="chart-card" data-state="loading">
+        <div class="chart-head">
+          <div class="chart-titles">
+            <h2 id="chart-title" class="card-title">Preisverlauf</h2>
+            <p id="chart-subtitle" class="card-sub">&nbsp;</p>
+          </div>
+          <a href="#table" id="table-link" class="text-link">Als Tabelle</a>
+        </div>
+        <fieldset class="range-picker" id="range-picker">
+          <legend class="sr-only">Zeitraum</legend>
+          <div class="segmented" data-active="3">
+            <input type="radio" name="range" id="range-1" value="1"><label for="range-1">1&nbsp;Tag</label>
+            <input type="radio" name="range" id="range-2" value="2"><label for="range-2">2&nbsp;Tage</label>
+            <input type="radio" name="range" id="range-3" value="3" checked><label for="range-3">3&nbsp;Tage</label>
+            <span class="seg-active" aria-hidden="true"><span>1&nbsp;Tag</span><span>2&nbsp;Tage</span><span>3&nbsp;Tage</span></span>
+          </div>
+          <p class="range-hint" id="range-hint"></p>
+        </fieldset>
+        <p id="chart-readout" class="chart-readout" aria-hidden="true">&nbsp;</p>
+        <div id="chart" class="chart" data-ui tabindex="0" role="group" aria-label="Preisverlauf, mit Pfeiltasten navigierbar; Bild auf und ab springen stundenweise, G zum günstigsten Fenster"></div>
+        <output id="chart-output" class="sr-only" aria-live="polite"></output>
+        <ul class="legend" id="chart-legend" aria-label="Legende">
+          <li><span class="swatch swatch-past" aria-hidden="true"></span>Vergangene Preise</li>
+          <li><span class="swatch swatch-future" aria-hidden="true"></span>Kommende Preise (bereits bekannt)</li>
+          <li id="legend-cheapest"><span class="swatch swatch-cheapest" aria-hidden="true"></span>Günstigstes kommendes 4-h-Fenster</li>
+        </ul>
+        <p id="chart-supplement" class="chart-note" hidden></p>
+        <details id="table" class="table-details">
+          <summary id="table-summary">Alle Werte als Tabelle</summary>
+          <div class="table-wrap" tabindex="0" role="region" aria-labelledby="table-caption">
+            <table id="price-table">
+              <caption id="table-caption">Alle Börsenpreise</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Zeitfenster</th>
+                  <th scope="col" class="num">ct/kWh</th>
+                  <th scope="col" class="num">€/MWh</th>
+                  <th scope="col">Markierung</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+
+      <section class="kpis" aria-label="Kennzahlen">
         <div class="tile tile-current" id="kpi-current" data-state="loading">
           <p class="tile-label" data-field="label">Jetzt</p>
           <p class="tile-value" data-field="value">&nbsp;</p>
@@ -95,53 +140,7 @@
         </div>
       </section>
 
-      <section class="card card-chart reveal" data-reveal="2" aria-labelledby="chart-title" id="chart-card" data-state="loading">
-        <div class="chart-head">
-          <div class="chart-titles">
-            <h2 id="chart-title" class="card-title">Preisverlauf</h2>
-            <p id="chart-subtitle" class="card-sub">&nbsp;</p>
-          </div>
-          <a href="#table" id="table-link" class="text-link">Als Tabelle</a>
-        </div>
-        <fieldset class="range-picker" id="range-picker">
-          <legend class="sr-only">Zeitraum</legend>
-          <div class="segmented" data-active="3">
-            <span class="seg-indicator" aria-hidden="true"></span>
-            <input type="radio" name="range" id="range-1" value="1"><label for="range-1">1&nbsp;Tag</label>
-            <input type="radio" name="range" id="range-2" value="2"><label for="range-2">2&nbsp;Tage</label>
-            <input type="radio" name="range" id="range-3" value="3" checked><label for="range-3">3&nbsp;Tage</label>
-          </div>
-          <p class="range-hint" id="range-hint"></p>
-        </fieldset>
-        <p id="chart-readout" class="chart-readout" aria-hidden="true">&nbsp;</p>
-        <div id="chart" class="chart" data-ui tabindex="0" role="group" aria-label="Preisverlauf, mit Pfeiltasten navigierbar"></div>
-        <output id="chart-output" class="sr-only" aria-live="polite"></output>
-        <ul class="legend" id="chart-legend" aria-label="Legende">
-          <li><span class="swatch swatch-past" aria-hidden="true"></span>Vergangene Preise</li>
-          <li><span class="swatch swatch-future" aria-hidden="true"></span>Kommende Preise (bereits bekannt)</li>
-          <li id="legend-cheapest"><span class="swatch swatch-cheapest" aria-hidden="true"></span>Günstigstes kommendes 4-h-Fenster</li>
-        </ul>
-        <p id="chart-supplement" class="chart-note" hidden></p>
-        <details id="table" class="table-details">
-          <summary id="table-summary">Alle Werte als Tabelle</summary>
-          <div class="table-wrap">
-            <table id="price-table">
-              <caption id="table-caption">Alle Börsenpreise</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Zeitfenster</th>
-                  <th scope="col" class="num">ct/kWh</th>
-                  <th scope="col" class="num">€/MWh</th>
-                  <th scope="col">Markierung</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </details>
-      </section>
-
-      <article id="hero" class="card card-past reveal" data-reveal="3" aria-labelledby="hero-title" data-state="loading">
+      <article id="hero" class="card card-past reveal" data-reveal="2" aria-labelledby="hero-title" data-state="loading">
         <h2 id="hero-title" class="card-title">Günstigstes Fenster der letzten 72 Stunden</h2>
         <p class="past-day" data-field="day">&nbsp;</p>
         <p class="past-time" data-field="time">&nbsp;</p>

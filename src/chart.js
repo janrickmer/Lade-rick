@@ -1,9 +1,11 @@
-// SVG-Preisverlauf ohne Abhängigkeiten: Stufenlinie mit Flächenfüllung, grünes Band für das günstigste
-// kommende 4-h-Fenster (nie ein vergangenes), „Jetzt“-Linie, Bereich der kommenden Preise,
-// Crosshair mit Tooltip (Desktop) bzw. Ablesezeile (Mobil) und Tastaturnavigation.
+// SVG-Preisverlauf ohne Abhängigkeiten: Stufenlinie mit Flächenfüllung, oranges Band für das günstigste
+// kommende 4-h-Fenster (nie ein vergangenes) mit seiner Uhrzeit darüber, „Jetzt“-Linie, Vergangenheit als Tonfläche,
+// Crosshair mit Tooltip (Desktop) bzw. Ablesezeile (Mobil, folgt dem Finger) und Tastaturnavigation.
 
 import { HOUR, MINUTE, currentPoint, floorToResolution } from './analysis.js';
-import { formatCt, formatMwh, formatTime, formatDateShort, formatRange, berlinParts } from './format.js';
+import {
+  formatCt, formatMwh, formatTime, formatEndTime, formatTimeRange, formatDateShort, formatRange, berlinParts, typographicMinus,
+} from './format.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const CHEAPEST_TAG = 'günstigstes kommendes Fenster';
@@ -11,6 +13,8 @@ const MARGIN = { top: 26, right: 14, bottom: 42, left: 46 };
 const TICK_STEPS_H = [3, 6, 12, 24];
 const MIN_LABEL_PX = 48;
 const MIN_LABEL_PX_SHORT = 34;
+/** Dauer, in der die Eingangsbewegung nach dem ersten Zeichnen mit Daten weiterläuft (ms) */
+const ENTER_MS = 900;
 
 function svgEl(name, attrs = {}, parent = null) {
   const node = document.createElementNS(SVG_NS, name);
@@ -74,6 +78,20 @@ function shortDayLabel(ts) {
   return `${weekday} ${Number(dd)}.${Number(mm)}.`;
 }
 
+/** „11–15 Uhr“ bzw. „11:15–15:15 Uhr“ – kurze Fensterzeit für die Beschriftung über dem Band. */
+function bandTimeLabel(start, end) {
+  const a = formatTime(start);
+  const b = formatEndTime(end);
+  const whole = a.endsWith(':00') && b.endsWith(':00');
+  return whole ? `${Number(a.slice(0, 2))}–${Number(b.slice(0, 2))}\u00a0Uhr` : `${a}–${b}\u00a0Uhr`;
+}
+
+/** Breite eines SVG-Texts; vor dem ersten Layout (oder ohne Layout-Engine) geschätzt. */
+function textWidth(node) {
+  const w = typeof node.getComputedTextLength === 'function' ? node.getComputedTextLength() : 0;
+  return w > 0 ? w : node.textContent.length * 7.2;
+}
+
 /** „Schöne“ Schrittweite für die y-Achse (ct/kWh). */
 function niceStep(span, maxTicks = 6) {
   const raw = span / Math.max(1, maxTicks);
@@ -107,7 +125,8 @@ export class PriceChart {
     this.selected = -1;
     this.pinned = false;
     this.layout = null;
-    this.enterUntil = 0; // Zeitfenster der Eingangsbewegung beim ersten Zeichnen mit Daten
+    this.enterStart = 0; // Beginn der Eingangsbewegung (erstes Zeichnen mit Daten), performance.now()
+    this.touch = null; // laufende Fingergeste: { id, prevTs, prevPinned }
     this.tooltip = document.createElement('div');
     this.tooltip.className = 'chart-tooltip';
     this.tooltip.hidden = true;
@@ -116,9 +135,11 @@ export class PriceChart {
     this.onKey = this.onKey.bind(this);
     this.onFocus = this.onFocus.bind(this);
     this.onBlur = this.onBlur.bind(this);
+    this.onOutsidePointer = this.onOutsidePointer.bind(this);
     container.addEventListener('keydown', this.onKey);
     container.addEventListener('focus', this.onFocus);
     container.addEventListener('blur', this.onBlur);
+    document.addEventListener('pointerdown', this.onOutsidePointer);
 
     if (typeof ResizeObserver === 'function') {
       this.ro = new ResizeObserver(() => this.render());
@@ -150,6 +171,7 @@ export class PriceChart {
     this.container.removeEventListener('keydown', this.onKey);
     this.container.removeEventListener('focus', this.onFocus);
     this.container.removeEventListener('blur', this.onBlur);
+    document.removeEventListener('pointerdown', this.onOutsidePointer);
   }
 
   // ---------- Rendering ----------
@@ -198,16 +220,26 @@ export class PriceChart {
       width, height, viewBox: `0 0 ${width} ${height}`, role: 'img',
       'aria-labelledby': 'chart-title', 'aria-describedby': 'chart-desc',
     });
-    // Eingangsbewegung nur beim ersten Zeichnen mit Daten (spätere Neuberechnungen jede Minute bleiben ruhig)
+    // Eingangsbewegung nur beim ersten Zeichnen mit Daten (spätere Neuberechnungen jede Minute bleiben ruhig). Wird in
+    // dieser Zeit neu gezeichnet (erst Zwischenspeicher, dann Netzabruf), läuft sie weiter, statt neu zu beginnen:
+    // --enter-elapsed verschiebt die Startzeit der Animationen um die schon vergangene Zeit.
     const tNow = typeof performance !== 'undefined' ? performance.now() : 0;
-    if (!this.enterUntil) this.enterUntil = tNow + 1200;
-    if (tNow < this.enterUntil) svg.classList.add('is-entering');
+    if (!this.enterStart) this.enterStart = tNow;
+    const elapsed = tNow - this.enterStart;
+    if (elapsed < ENTER_MS) {
+      svg.classList.add('is-entering');
+      svg.style.setProperty('--enter-elapsed', `${Math.round(elapsed)}ms`);
+    }
+    c.insertBefore(svg, this.tooltip); // schon jetzt im Dokument, damit Beschriftungen gemessen werden können
     const desc = svgEl('desc', { id: 'chart-desc' }, svg);
     desc.textContent = this.describe(visible, xMin, xMax);
 
+    // Ebenen von unten nach oben: Tonfläche, Fläche unter der Kurve, Fensterband (deckend, damit es einfarbig bleibt),
+    // Gitter und Nulllinie (auch im Fenster ablesbar), Linien, Markierungen, Achsen, Auswahl
     const gRegions = svgEl('g', { 'aria-hidden': 'true' }, svg);
+    const gArea = svgEl('g', { 'aria-hidden': 'true' }, svg);
+    const gBand = svgEl('g', { 'aria-hidden': 'true' }, svg);
     const gGrid = svgEl('g', { 'aria-hidden': 'true' }, svg);
-    const gBand = svgEl('g', { 'aria-hidden': 'true' }, svg); // Fensterband über dem Gitter, unter der Kurve
     const gData = svgEl('g', { 'aria-hidden': 'true' }, svg);
     const gAnno = svgEl('g', { 'aria-hidden': 'true' }, svg);
     const gAxis = svgEl('g', { 'aria-hidden': 'true' }, svg);
@@ -220,30 +252,27 @@ export class PriceChart {
     if (pastEnd > xMin) {
       svgEl('rect', { class: 'region-past', x: x(xMin), y: MARGIN.top, width: x(pastEnd) - x(xMin), height: plotH }, gRegions);
     }
-    const futureStart = Math.max(xMin, nowFloor + res * MINUTE);
-    if (x(Math.min(lastEnd, xMax)) - x(Math.max(futureStart, now)) > 70) {
-      text(gRegions, x(Math.max(futureStart, now)) + 8, MARGIN.top + 14, 'kommend', 'region-label');
-    }
-
     // Oranges Band für das günstigste kommende Fenster (dieselbe Farbe wie die Antwortfläche)
+    let band = null;
     if (cheapest && cheapest.end > xMin && cheapest.start < xMax) {
       // Linke Kante nie vor der (auf Pixel gerundeten) Jetzt-Linie – das Fenster beginnt nach „jetzt“
       const nowLineX = now >= xMin && now <= xMax ? Math.round(x(now)) + 0.5 : -Infinity;
       const bx = Math.max(x(Math.max(cheapest.start, xMin)), nowLineX);
       const bw = Math.max(0, x(Math.min(cheapest.end, xMax)) - bx);
       svgEl('rect', { class: 'band-cheapest', x: bx, y: MARGIN.top, width: bw, height: plotH }, gBand);
-      const label = bw >= 130 ? 'günstigstes 4-h-Fenster' : bw >= 44 ? 'günstig' : null;
-      if (label) text(gBand, bx + 6, MARGIN.top + plotH - 8, label, 'band-label');
+      band = { cx: bx + bw / 2, label: bandTimeLabel(cheapest.start, cheapest.end) };
     }
 
-    // Gitter + y-Achse
+    // Gitter + y-Achse (ganze Zahlen, solange die Schrittweite ganzzahlig ist)
     const step = niceStep(yMax - yMin);
+    const digits = step >= 1 ? 0 : 1;
+    const nfTick = new Intl.NumberFormat('de-DE', { minimumFractionDigits: digits, maximumFractionDigits: digits });
     const firstTick = Math.ceil(yMin / step) * step;
     for (let v = firstTick; v <= yMax + 1e-9; v += step) {
       const yy = Math.round(y(v)) + 0.5;
       const isZero = Math.abs(v) < 1e-9;
       svgEl('line', { class: isZero ? 'zero-line' : 'grid-line', x1: MARGIN.left, x2: MARGIN.left + plotW, y1: yy, y2: yy }, gGrid);
-      text(gAxis, MARGIN.left - 6, yy + 4, formatCt(isZero ? 0 : v * 10, { unit: false }), 'y-label', { 'text-anchor': 'end' });
+      text(gAxis, MARGIN.left - 6, yy + 4, typographicMinus(nfTick.format(isZero ? 0 : v)), 'y-label', { 'text-anchor': 'end' });
     }
     if (yMin >= 0) svgEl('line', { class: 'zero-line', x1: MARGIN.left, x2: MARGIN.left + plotW, y1: Math.round(y(0)) + 0.5, y2: Math.round(y(0)) + 0.5 }, gGrid);
     text(gAxis, MARGIN.left - 6, MARGIN.top - 10, 'ct/kWh', 'y-label', { 'text-anchor': 'end' });
@@ -266,7 +295,7 @@ export class PriceChart {
       if (future.length) {
         const fStart = Math.max(future[0].start, split);
         const d = this.stepPath(future, x, y, split, xMax);
-        svgEl('path', { class: 'area', d: `${d} V ${y0.toFixed(1)} H ${x(fStart).toFixed(1)} Z` }, gData);
+        svgEl('path', { class: 'area', d: `${d} V ${y0.toFixed(1)} H ${x(fStart).toFixed(1)} Z` }, gArea);
         svgEl('path', { class: 'line', d }, gData);
       }
     }
@@ -282,14 +311,32 @@ export class PriceChart {
       for (const s of segs) svgEl('path', { class: 'line-cheapest', d: this.stepPath(s, x, y, Math.max(xMin, cheapest.start), Math.min(xMax, cheapest.end)) }, gData);
     }
 
-    // Jetzt: feine Linie, Punkt auf der Kurve, Beschriftung
+    // Jetzt: feine Linie, Punkt auf der Kurve, Beschriftung; darüber die Uhrzeit des Fensters (verbindet Antwort und Band)
+    const plotL = MARGIN.left;
+    const plotR = MARGIN.left + plotW;
+    const labelY = MARGIN.top - 8;
+    let nowBox = null;
     if (now >= xMin && now <= xMax) {
       const nx = Math.round(x(now)) + 0.5;
       svgEl('line', { class: 'now-line', x1: nx, x2: nx, y1: MARGIN.top - 4, y2: MARGIN.top + plotH }, gAnno);
-      const anchor = nx > MARGIN.left + plotW - 40 ? 'end' : 'start';
-      text(gAnno, anchor === 'end' ? nx - 6 : nx + 6, MARGIN.top - 8, 'jetzt', 'now-label', { 'text-anchor': anchor });
+      const nowLabel = text(gAnno, nx + 6, labelY, 'jetzt', 'now-label');
+      const w = textWidth(nowLabel);
+      nowBox = { l: nx + 6, r: nx + 6 + w, nx, w, node: nowLabel };
+      if (nowBox.r > plotR) this.placeLeft(nowBox);
       const cur = visible.find((p) => p.start <= now && now < p.end);
       if (cur) svgEl('circle', { class: 'now-dot', r: 5, cx: nx, cy: y(cur.price / 10).toFixed(1) }, gAnno);
+    }
+    if (band) {
+      const node = text(gAnno, 0, labelY, band.label, 'band-label');
+      const w = textWidth(node);
+      let l = Math.min(Math.max(band.cx - w / 2, plotL), plotR - w);
+      const gap = 8;
+      if (nowBox && l < nowBox.r + gap && l + w > nowBox.l - gap) {
+        // Kollision mit „jetzt“: „jetzt“ links der Linie, die Fensterzeit rechts davon
+        this.placeLeft(nowBox);
+        if (l < nowBox.r + gap && l + w > nowBox.l - gap) l = nowBox.r + gap;
+      }
+      node.setAttribute('x', l.toFixed(1));
     }
 
     // x-Achse: Uhrzeiten + Tage
@@ -323,22 +370,27 @@ export class PriceChart {
     svgEl('line', { class: 'crosshair', x1: 0, x2: 0, y1: MARGIN.top, y2: MARGIN.top + plotH }, gHover);
     svgEl('circle', { class: 'marker', r: 4.5, cx: 0, cy: 0 }, gHover);
     const hit = svgEl('rect', { class: 'hit-area', x: MARGIN.left, y: MARGIN.top - 6, width: plotW, height: plotH + 6 + MARGIN.bottom }, svg);
-    hit.addEventListener('pointermove', (e) => this.onPointer(e));
-    hit.addEventListener('pointerdown', (e) => {
-      this.pointerFocus = true;
-      this.lastPointerType = e.pointerType;
-      this.onPointer(e, true);
-      if (e.pointerType === 'touch') this.pinned = true;
-    });
+    hit.addEventListener('pointerdown', (e) => this.onPointerDown(e));
+    hit.addEventListener('pointermove', (e) => this.onPointerMove(e));
+    hit.addEventListener('pointerup', (e) => this.onPointerUp(e));
+    hit.addEventListener('pointercancel', (e) => this.onPointerCancel(e));
     hit.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch' && !this.pinned) this.clearSelection(); });
     hit.addEventListener('click', () => {
-      if (this.lastPointerType === 'touch') return; // Tippen wählt und fixiert bereits (pointerdown)
+      if (this.lastPointerType === 'touch') return; // Finger: Auswahl bleibt nach dem Loslassen ohnehin stehen
       this.pinned = !this.pinned;
       if (!this.pinned) this.clearSelection();
     });
 
-    c.insertBefore(svg, this.tooltip);
     if (this.selected >= 0) this.select(this.selected);
+    else this.showDefaultReadout();
+  }
+
+  /** „jetzt“ links neben die Jetzt-Linie setzen. */
+  placeLeft(box) {
+    box.node.setAttribute('x', (box.nx - 6).toFixed(1));
+    box.node.setAttribute('text-anchor', 'end');
+    box.l = box.nx - 6 - box.w;
+    box.r = box.nx - 6;
   }
 
   stepPath(points, x, y, clipStart, clipEnd) {
@@ -422,14 +474,25 @@ export class PriceChart {
     this.tooltip.style.left = `${Math.max(0, left)}px`;
     this.tooltip.style.top = `${Math.max(0, Math.min(cy - 20, this.layout.height - 80))}px`;
 
-    // Ablesezeile (Mobil) + Screenreader-Ausgabe
+    // Ablesezeile (Mobil, höchstens zwei Zeilen; €/MWh stehen in Tooltip und Tabelle) + Screenreader-Ausgabe
     if (this.readout) {
-      this.readout.replaceChildren();
       const strong = document.createElement('strong');
       strong.textContent = info.ct;
-      this.readout.append(`${info.title} · `, strong, ` · ${info.mwh}${info.tags.length ? ` · ${info.tags.join(', ')}` : ''}`);
+      const tags = info.tags.map((t) => (t === CHEAPEST_TAG ? 'günstigstes Fenster' : t));
+      this.readout.replaceChildren(`${info.title} · `, strong, tags.length ? ` · ${tags.join(', ')}` : '');
     }
     if (this.output) this.output.textContent = info.text;
+  }
+
+  /** Ablesezeile ohne Auswahl: der aktuelle Preis (wie in Börsen-Apps), sonst leer. */
+  showDefaultReadout() {
+    if (!this.readout) return;
+    const now = this.state?.now;
+    const cur = Number.isFinite(now) ? this.visible.find((p) => p.start <= now && now < p.end) : null;
+    if (!cur) { this.readout.textContent = '\u00a0'; return; }
+    const strong = document.createElement('strong');
+    strong.textContent = formatCt(cur.price);
+    this.readout.replaceChildren(`Jetzt, ${formatTimeRange(cur.start, cur.end)} · `, strong);
   }
 
   clearSelection() {
@@ -437,7 +500,7 @@ export class PriceChart {
     this.pinned = false;
     this.hoverLayer?.setAttribute('visibility', 'hidden');
     this.tooltip.hidden = true;
-    if (this.readout) this.readout.textContent = ' ';
+    this.showDefaultReadout();
     if (this.output) this.output.textContent = '';
   }
 
@@ -446,9 +509,50 @@ export class PriceChart {
     if (i >= 0) this.select(i);
   }
 
-  onPointer(e, pin = false) {
+  /**
+   * Maus: Bewegen zeigt den Punkt, Klicken fixiert ihn. Finger: Antippen wählt den Punkt, Wischen folgt dem Finger,
+   * nach dem Loslassen bleibt die Auswahl stehen. Wird die Geste zum Scrollen (pointercancel), gilt die vorige Auswahl.
+   */
+  onPointerDown(e) {
+    this.pointerFocus = true;
+    this.lastPointerType = e.pointerType;
+    if (e.pointerType === 'touch') {
+      if (this.touch) return; // weiterer Finger: ignorieren, sonst springt die Auswahl
+      const prev = this.selected >= 0 ? this.visible[this.selected] : null;
+      this.touch = { id: e.pointerId, prevTs: prev ? prev.start : null, prevPinned: this.pinned };
+    }
+    this.pointAt(e);
+  }
+
+  onPointerMove(e) {
+    if (e.pointerType === 'touch') {
+      if (this.touch?.id === e.pointerId) this.pointAt(e);
+      return;
+    }
+    if (!this.pinned) this.pointAt(e);
+  }
+
+  onPointerUp(e) {
+    if (this.touch?.id !== e.pointerId) return;
+    this.touch = null;
+    this.pinned = true;
+  }
+
+  onPointerCancel(e) {
+    if (this.touch?.id !== e.pointerId) return;
+    const { prevTs, prevPinned } = this.touch;
+    this.touch = null;
+    const i = prevTs === null ? -1 : this.visible.findIndex((p) => p.start === prevTs);
+    if (i >= 0) { this.select(i); this.pinned = prevPinned; } else this.clearSelection();
+  }
+
+  /** Tippen oder Klicken außerhalb des Diagramms hebt eine fixierte Auswahl auf. */
+  onOutsidePointer(e) {
+    if (this.pinned && e.target instanceof Node && !this.container.contains(e.target)) this.clearSelection();
+  }
+
+  pointAt(e) {
     if (!this.layout) return;
-    if (this.pinned && !pin) return;
     const rect = this.container.getBoundingClientRect();
     const px = e.clientX - rect.left;
     const { xMin, xMax, plotW } = this.layout;
@@ -469,12 +573,22 @@ export class PriceChart {
   onKey(e) {
     if (!this.visible.length || e.altKey || e.ctrlKey || e.metaKey) return;
     const last = this.visible.length - 1;
+    const from = () => (this.selected < 0 ? nearestIndex(this.visible, this.state.now) : this.selected);
+    // Bild auf/ab: eine Stunde weiter bzw. zurück (mit Umschalt einen Tag), unabhängig von der Auflösung
+    const jump = (hours) => nearestIndex(this.visible, this.visible[from()].start + hours * HOUR);
+    const { cheapest } = this.state;
     let next = null;
     switch (e.key) {
-      case 'ArrowLeft': next = this.selected < 0 ? nearestIndex(this.visible, this.state.now) : Math.max(0, this.selected - 1); break;
-      case 'ArrowRight': next = this.selected < 0 ? nearestIndex(this.visible, this.state.now) : Math.min(last, this.selected + 1); break;
+      case 'ArrowLeft': next = this.selected < 0 ? from() : Math.max(0, this.selected - 1); break;
+      case 'ArrowRight': next = this.selected < 0 ? from() : Math.min(last, this.selected + 1); break;
+      case 'PageUp': next = jump(e.shiftKey ? 24 : 1); break;
+      case 'PageDown': next = jump(e.shiftKey ? -24 : -1); break;
       case 'Home': next = 0; break;
       case 'End': next = last; break;
+      case 'g': case 'G':
+        if (!cheapest || !this.layout || cheapest.end <= this.layout.xMin || cheapest.start >= this.layout.xMax) return;
+        next = nearestIndex(this.visible, Math.max(cheapest.start, this.layout.xMin));
+        break;
       case 'Escape': this.clearSelection(); e.preventDefault(); return;
       case 'Enter': case ' ': this.pinned = !this.pinned; e.preventDefault(); return;
       default: return;

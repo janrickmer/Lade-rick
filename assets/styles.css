@@ -24,8 +24,8 @@
   --muted: #646872;
   /* Diagramm */
   --grid: #e7e9ed;
-  --axis: #c3c7cf;
-  --line-past: #9a9ea7;
+  --axis: #8a8e96;
+  --line-past: #80848c;
   --line-future: #111214;
   --past-wash: #f4f5f7;
   --future-area: rgba(17, 18, 20, 0.06);
@@ -34,6 +34,8 @@
   --orange-ink: #0b0b0b;
   --orange-ink-2: rgba(11, 11, 11, 0.74);
   --orange-wash: rgba(240, 138, 46, 0.16);
+  --band-edge: #b4560f; /* Kante des Fensterbands: 3:1 gegen helle Flächen */
+  --tooltip-bg: var(--surface);
   --critical: #c42b2b;
   --warning-wash: #fdeec9;
   --focus: #111214;
@@ -59,7 +61,7 @@
   --t-press: 140ms;
   --t-hover: 180ms;
   --t-ui: 240ms;
-  --t-reveal: 640ms;
+  --t-reveal: 420ms;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -73,12 +75,14 @@
     --ink-2: #c0c3ca;
     --muted: #979ba4;
     --grid: #2a2c30;
-    --axis: #43464d;
+    --axis: #6e727b;
     --line-past: #6e727b;
     --line-future: #f4f5f7;
     --past-wash: #222327;
     --future-area: rgba(244, 245, 247, 0.07);
     --orange-wash: rgba(240, 138, 46, 0.22);
+    --band-edge: #f08a2e;
+    --tooltip-bg: var(--surface-3);
     --critical: #ff6b63;
     --warning-wash: #3b3220;
     --focus: #f4f5f7;
@@ -97,12 +101,14 @@
   --ink-2: #c0c3ca;
   --muted: #979ba4;
   --grid: #2a2c30;
-  --axis: #43464d;
+  --axis: #6e727b;
   --line-past: #6e727b;
   --line-future: #f4f5f7;
   --past-wash: #222327;
   --future-area: rgba(244, 245, 247, 0.07);
   --orange-wash: rgba(240, 138, 46, 0.22);
+  --band-edge: #f08a2e;
+  --tooltip-bg: var(--surface-3);
   --critical: #ff6b63;
   --warning-wash: #3b3220;
   --focus: #f4f5f7;
@@ -153,10 +159,14 @@ a:hover { text-decoration-color: currentColor; }
 }
 
 .skip-link {
-  position: absolute; left: 16px; top: -64px; z-index: 10;
+  position: absolute; left: 16px; top: 12px; z-index: 10;
   padding: 10px 16px; background: var(--ink); color: var(--page); border-radius: 999px; text-decoration: none;
+  transform: translateY(calc(-100% - 16px)); /* auch bei großer Schrift ganz außerhalb */
 }
-.skip-link:focus { top: 12px; }
+.skip-link:focus { transform: none; }
+
+/* Hell/Dunkel springt in einem Zug um (siehe app.js withoutTransitions); nur die Symbole im Knopf blenden über */
+html.theme-switching *:not(.icon), html.theme-switching *::before, html.theme-switching *::after { transition: none !important; }
 
 h1, h2, h3 { margin: 0; line-height: 1.2; font-weight: 650; letter-spacing: -0.01em; text-wrap: balance; }
 p { margin: 0; }
@@ -204,8 +214,10 @@ p { margin: 0; }
   transition: transform var(--t-press) var(--ease-out), opacity var(--t-hover) ease;
 }
 
-.theme-toggle:active, .button:active, .segmented label:active, .answer-details > summary:active,
-.info-details > summary:active, .table-details > summary:active { transform: scale(0.97); }
+.button:active, .segmented label:active, .table-details > summary:active { transform: scale(0.97); }
+/* breite Zeilen nur leicht, der kleine runde Knopf deutlicher – sonst wirkt der Druck ungleich stark */
+.answer-details > summary:active, .info-details > summary:active { transform: scale(0.99); }
+.theme-toggle:active { transform: scale(0.95); }
 
 @media (hover: hover) and (pointer: fine) {
   .theme-toggle:hover { background: var(--surface-3); }
@@ -238,6 +250,9 @@ p { margin: 0; }
 }
 .card-title { font-size: var(--step-title); }
 .card-sub { margin-top: 4px; color: var(--ink-2); }
+/* Der genaue Datumsbereich steht am Handy schon an der x-Achse */
+@media (max-width: 719.98px) { .sub-range { display: none; } }
+.sub-res { white-space: nowrap; }
 
 /* Raster der oberen Bühne: Handy in Lesereihenfolge, Desktop Antwort neben Kennzahlen, Diagramm darunter */
 .board {
@@ -275,22 +290,31 @@ p { margin: 0; }
 .answer-title { font-size: var(--step-title); max-width: 40ch; }
 .answer-time {
   margin-top: 8px;
-  font-size: clamp(2.5rem, 14cqi, 6.25rem); font-weight: 700; line-height: 1; letter-spacing: -0.035em;
-  white-space: nowrap;
+  font-size: clamp(2.125rem, 15cqi, 6.5rem); font-weight: 700; line-height: 1.02; letter-spacing: -0.035em;
+  text-wrap: balance;
 }
-.time-unit { font-size: 0.36em; font-weight: 600; letter-spacing: 0; }
-.answer-time[data-dst="true"] { white-space: normal; font-size: clamp(1.75rem, 8.5cqi, 3.5rem); letter-spacing: -0.02em; }
+/* Beginn und Ende bleiben je beisammen; bei wenig Platz bricht die Zeile nur zwischen ihnen um */
+.t-part { white-space: nowrap; }
+.time-unit { font-size: var(--step-title); font-weight: 600; letter-spacing: 0; }
+.answer-time[data-dst="true"] { font-size: clamp(1.75rem, 8.5cqi, 3.5rem); letter-spacing: -0.02em; }
 .answer-price { margin-top: 14px; font-size: var(--step-title); color: var(--ink-2); }
 .answer-ct { color: var(--ink); font-weight: 700; }
-.answer-mwh { font-size: var(--step-body); white-space: nowrap; }
-.answer-starts { margin-top: 4px; font-size: var(--step-title); font-weight: 600; }
-.answer-starts:empty, .answer-meta:empty { display: none; }
+.answer-mwh { white-space: nowrap; }
+.answer-starts { color: var(--ink); font-weight: 600; }
+.answer-starts:not(:empty)::before { content: " · "; color: var(--ink-2); font-weight: 400; }
+.answer-meta:empty { display: none; }
 .answer-meta { margin-top: 6px; }
 .answer-empty { margin-top: 10px; font-size: var(--step-title); font-weight: 600; max-width: 34ch; }
 .answer-foot { margin-top: 18px; font-size: var(--step-small); color: var(--ink-2); max-width: 62ch; }
 .answer-foot [data-field="known"]:not(:empty)::before { content: " "; }
 
 .answer-details { margin-top: 16px; border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.24); }
+/* Desktop: Die Karte ist so hoch wie die Kennzahlen daneben; der Rückblick sitzt dann unten statt einer Leerfläche */
+@media (min-width: 960px) {
+  .answer { display: flex; flex-direction: column; }
+  .answer-details { margin-top: auto; }
+  .answer-foot { margin-bottom: 16px; }
+}
 .answer-details > summary {
   list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px;
   min-height: 48px; padding: 0 16px; border-radius: var(--radius-sm);
@@ -318,17 +342,16 @@ p { margin: 0; }
   .tile-current { grid-column: auto; }
 }
 @media (min-width: 960px) {
-  .kpis { grid-template-columns: minmax(0, 1fr); grid-template-rows: repeat(3, 1fr); }
-  .tile { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 2px 16px; padding: 18px 22px; }
-  .tile-label { grid-column: 1; }
-  .tile-value { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
-  .tile-sub { grid-column: 1; }
+  /* neben der Antwort gestapelt: Beschriftung, Wert, Unterzeile beisammen; „Jetzt“ trägt den größten Wert */
+  .kpis { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; }
+  .tile { display: grid; align-content: center; padding: 18px 22px; }
+  .tile:not(.tile-current) .tile-value { font-size: var(--step-title); }
 }
 
 /* ---------- Diagrammkarte ---------- */
 
 .chart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-.text-link { font-weight: 600; white-space: nowrap; padding: 2px 0; }
+.text-link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; white-space: nowrap; }
 
 .range-picker { border: 0; padding: 0; margin: 16px 0 0; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
 .segmented {
@@ -338,29 +361,31 @@ p { margin: 0; }
 }
 .segmented input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: -1px; pointer-events: none; }
 .segmented label {
-  position: relative; z-index: 1; display: grid; place-items: center; min-height: 40px; padding: 0 14px;
+  display: grid; place-items: center; min-height: 44px; padding: 0 14px;
   border-radius: 999px; font-weight: 600; color: var(--ink-2); cursor: pointer; user-select: none;
+  transition: transform var(--t-press) var(--ease-out), color var(--t-hover) ease;
 }
-.segmented label { transition: color var(--t-ui) var(--ease-out), transform var(--t-press) var(--ease-out), background-color 0s; }
-/* Das gewählte Feld bekommt seine Fläche selbst, sobald die gleitende Markierung angekommen ist (ohne Bewegung sofort) */
-.segmented input:checked + label { color: var(--page); background-color: var(--ink); transition-delay: 0s, 0s, var(--t-ui); }
-.segmented[data-keyboard="true"] input:checked + label { transition-delay: 0s; }
-.segmented input:focus-visible + label { outline: 2px solid var(--focus); outline-offset: 2px; }
-.seg-indicator {
-  position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 3);
-  border-radius: 999px; background: var(--ink);
-  transform: translateX(200%);
-  transition: transform var(--t-ui) var(--ease-out);
+/* Gewähltes Feld: eine Kopie der Beschriftungen in Aktivfarben liegt über der Zeile und wird per clip-path auf das
+   gewählte Feld zugeschnitten. Fläche und Schriftfarbe wandern so immer gemeinsam (keine Zwischenzustände). */
+.seg-active {
+  position: absolute; inset: 4px; z-index: 1; pointer-events: none;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-radius: 999px; background: var(--ink); color: var(--page); font-weight: 600;
+  clip-path: inset(0 0 0 66.667% round 999px);
+  transition: clip-path var(--t-ui) var(--ease-out);
 }
-.segmented[data-active="1"] .seg-indicator { transform: translateX(0); }
-.segmented[data-active="2"] .seg-indicator { transform: translateX(100%); }
-.segmented[data-active="3"] .seg-indicator { transform: translateX(200%); }
-.segmented[data-keyboard="true"] .seg-indicator { transition: none; }
+.seg-active > span { display: grid; place-items: center; padding: 0 14px; }
+.segmented[data-active="1"] .seg-active { clip-path: inset(0 66.667% 0 0 round 999px); }
+.segmented[data-active="2"] .seg-active { clip-path: inset(0 33.333% 0 33.333% round 999px); }
+.segmented[data-active="3"] .seg-active { clip-path: inset(0 0 0 66.667% round 999px); }
+.segmented[data-keyboard="true"] .seg-active { transition: none; }
+.segmented:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 .range-hint { flex: 1 1 240px; min-width: 0; font-size: var(--step-small); color: var(--muted); }
 .range-hint:empty { display: none; }
 
+/* Ablesezeile (Handy): ohne Auswahl der aktuelle Preis; feste Höhe für zwei Zeilen, damit nichts springt */
 .chart-readout {
-  margin-top: 12px; min-height: 1.5em; color: var(--ink-2);
+  margin-top: 12px; min-height: 3em; color: var(--ink-2);
 }
 .chart-readout strong { color: var(--ink); }
 .chart {
@@ -375,16 +400,15 @@ p { margin: 0; }
 .chart .region-past { fill: var(--past-wash); }
 .chart .grid-line { stroke: var(--grid); stroke-width: 1; shape-rendering: crispEdges; }
 .chart .axis-line { stroke: var(--grid); stroke-width: 1; shape-rendering: crispEdges; }
-.chart .zero-line { stroke: var(--axis); stroke-width: 1.5; shape-rendering: crispEdges; }
+.chart .zero-line { stroke: var(--axis); stroke-width: 1; shape-rendering: crispEdges; }
 .chart .y-label, .chart .x-label, .chart .x-day { fill: var(--muted); font-size: var(--step-small); }
 .chart .x-day { fill: var(--ink-2); font-weight: 600; }
 .chart .area { fill: var(--future-area); }
 .chart .line-past { fill: none; stroke: var(--line-past); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .chart .line { fill: none; stroke: var(--line-future); stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
 .chart .line-cheapest { fill: none; stroke: var(--orange-ink); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
-.chart .band-cheapest { fill: var(--orange); }
-.chart .region-label { fill: var(--muted); font-size: var(--step-small); font-weight: 600; }
-.chart .band-label { fill: var(--orange-ink); font-size: var(--step-small); font-weight: 700; }
+.chart .band-cheapest { fill: var(--orange); stroke: var(--band-edge); stroke-width: 1; shape-rendering: crispEdges; }
+.chart .band-label { fill: var(--ink); font-size: var(--step-small); font-weight: 700; }
 .chart .now-line { stroke: var(--ink); stroke-width: 1; stroke-opacity: 0.35; shape-rendering: crispEdges; }
 .chart .now-dot { fill: var(--ink); stroke: var(--surface); stroke-width: 3; }
 .chart .now-label { fill: var(--ink); font-size: var(--step-small); font-weight: 700; }
@@ -395,7 +419,7 @@ p { margin: 0; }
 
 .chart-tooltip {
   position: absolute; z-index: 2; pointer-events: none;
-  background: var(--surface); color: var(--ink);
+  background: var(--tooltip-bg); color: var(--ink);
   border-radius: var(--radius-sm); padding: 10px 12px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.14); /* taste-skill-ignore: der Tooltip schwebt über dem Diagramm */
   font-size: var(--step-small); line-height: 1.35;
@@ -414,7 +438,7 @@ p { margin: 0; }
 .swatch { display: inline-block; width: 18px; flex: none; }
 .swatch-past { height: 3px; border-radius: 2px; background: var(--line-past); }
 .swatch-future { height: 3px; border-radius: 2px; background: var(--line-future); }
-.swatch-cheapest { height: 12px; border-radius: 3px; background: var(--orange); }
+.swatch-cheapest { height: 12px; border-radius: 3px; background: var(--orange); border: 1px solid var(--band-edge); } /* taste-skill-ignore: Kante wie das Band, für 3:1 gegen Weiß */
 /* Dezenter Hinweis, wenn Preise vorerst nur aus einer ergänzenden Drittanbieter-Quelle stammen */
 .chart-note { margin: 12px 0 0; font-size: var(--step-small); line-height: 1.45; color: var(--muted); max-width: 80ch; }
 
@@ -426,7 +450,10 @@ p { margin: 0; }
   font-weight: 600; transition: transform var(--t-press) var(--ease-out);
 }
 .table-details > summary::-webkit-details-marker { display: none; }
-.table-wrap { max-height: 420px; overflow: auto; margin-top: 4px; border-radius: var(--radius-sm); background: var(--surface-2); }
+.table-wrap {
+  max-height: 420px; overflow: auto; margin-top: 4px; border-radius: var(--radius-sm); background: var(--surface-2);
+  scrollbar-width: thin; scrollbar-color: var(--axis) transparent;
+}
 table { border-collapse: collapse; width: 100%; }
 caption { text-align: left; padding: 10px 14px; color: var(--ink-2); font-size: var(--step-small); caption-side: top; }
 th, td { padding: 8px 14px; text-align: left; border-top: 1px solid var(--grid); white-space: nowrap; }
@@ -434,9 +461,18 @@ thead th { position: sticky; top: 0; background: var(--surface-3); border-top: 0
 td.num, th.num { text-align: right; }
 th:last-child, td:last-child { white-space: normal; min-width: 10ch; }
 @media (max-width: 419.98px) {
+  #price-table { font-size: var(--step-small); }
   #price-table th:nth-child(3), #price-table td:nth-child(3) { display: none; }
-  #price-table td:first-child { white-space: normal; }
   #price-table th, #price-table td { padding-left: 10px; padding-right: 10px; }
+  /* Datum nur in der ersten Zeile eines Tages (eigene Zeile), darunter genügt die Uhrzeit; vorgelesen wird es immer */
+  #price-table tr.day-first .t-day { display: block; font-weight: 600; }
+  #price-table tr:not(.day-first) .t-day {
+    position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .segmented input:not(:checked) + label:hover { color: var(--ink); }
+  .table-details > summary:hover { text-decoration: underline; text-underline-offset: 3px; }
 }
 tr.row-cheapest td { background: var(--orange-wash); }
 tr.row-now td { font-weight: 700; }
@@ -452,8 +488,8 @@ td.neg { color: var(--ink); }
   .past-side { grid-column: 2; grid-row: 1 / span 8; margin-top: 0; padding-top: 4px; }
 }
 .past-day { margin-top: 6px; color: var(--ink-2); }
-.past-time { margin-top: 2px; font-size: var(--step-value); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; white-space: nowrap; }
-.past-time[data-dst="true"] { white-space: normal; font-size: var(--step-title); }
+.past-time { margin-top: 2px; font-size: var(--step-value); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; text-wrap: balance; }
+.past-time[data-dst="true"] { font-size: var(--step-title); }
 .past-price { margin-top: 6px; color: var(--ink-2); }
 .past-ct { color: var(--ink); font-weight: 700; font-size: var(--step-title); }
 .past-mwh { font-size: var(--step-small); }
@@ -482,8 +518,10 @@ td.neg { color: var(--ink); }
 [data-state="loading"] .answer-time { display: block; min-height: 1em; width: 80%; }
 [data-state="loading"] .tile-value { display: block; width: 7ch; }
 .card-past { min-height: 180px; }
+/* Beim Nachladen leicht abgedunkelt – erst nach 300 ms, damit schnelle Abrufe nicht flackern */
+.answer, .kpis, .card-chart, .card-past { transition: opacity var(--t-hover) ease; }
 [data-refreshing="true"] .answer, [data-refreshing="true"] .kpis, [data-refreshing="true"] .card-chart, [data-refreshing="true"] .card-past {
-  opacity: 0.6; transition: opacity var(--t-hover) ease;
+  opacity: 0.75; transition-delay: 300ms;
 }
 
 /* ---------- Status ---------- */
@@ -543,25 +581,23 @@ td.neg { color: var(--ink); }
 .footer-brand { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: var(--step-title); font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
 
 /* ---------- Bewegung ---------- */
-/* Inhalte sind ohne Skript immer sichtbar: Ausgangszustände gelten nur unter html.js. Nur transform und opacity. */
+/* Ein Werkzeug für den kurzen Blick: Die Bühne setzt sich einmal kurz (nur Bewegung, Inhalte sind sofort lesbar), das
+   orange Fensterband steigt auf. Ohne Skript keine Bewegung. Nur transform und opacity. */
 
 @keyframes rise {
-  from { opacity: 0; transform: translateY(18px); }
-  to { opacity: 1; transform: none; }
+  from { transform: translateY(10px); }
+  to { transform: none; }
 }
-html.js .reveal { animation: rise var(--t-reveal) var(--ease-out) both; }
+html.js .reveal { animation: rise var(--t-reveal) var(--ease-out) backwards; }
 html.js .reveal[data-reveal="1"] { animation-delay: 70ms; }
 html.js .reveal[data-reveal="2"] { animation-delay: 140ms; }
-html.js .reveal[data-reveal="3"] { animation-delay: 210ms; }
-html.js .kpis.reveal .tile { animation: rise var(--t-reveal) var(--ease-out) both; }
-html.js .kpis.reveal .tile:nth-child(2) { animation-delay: 130ms; }
-html.js .kpis.reveal .tile:nth-child(3) { animation-delay: 190ms; }
+html.js .kpis .tile { animation: rise var(--t-reveal) var(--ease-out) backwards; }
+html.js .kpis .tile:nth-child(1) { animation-delay: 70ms; }
+html.js .kpis .tile:nth-child(2) { animation-delay: 120ms; }
+html.js .kpis .tile:nth-child(3) { animation-delay: 170ms; }
 
-html.js .reveal-scroll { opacity: 0; transform: translateY(24px); transition: opacity var(--t-reveal) var(--ease-out), transform var(--t-reveal) var(--ease-out); }
-html.js .reveal-scroll.is-visible { opacity: 1; transform: none; }
-html.js .reveal-scroll.is-instant { transition: none; }
-
-/* Signatur: das orange Fensterband steigt beim ersten Zeichnen gemeinsam mit der Antwortfläche auf */
+/* Signatur: das orange Fensterband steigt beim ersten Zeichnen auf. Wird in dieser Zeit neu gezeichnet, setzt
+   --enter-elapsed (chart.js) die Bewegung an der erreichten Stelle fort. */
 @keyframes band-rise {
   from { transform: scaleY(0); }
   to { transform: scaleY(1); }
@@ -569,25 +605,47 @@ html.js .reveal-scroll.is-instant { transition: none; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 .chart svg.is-entering .band-cheapest {
   transform-box: fill-box; transform-origin: 50% 100%;
-  animation: band-rise 720ms var(--ease-out) 260ms both;
+  animation: band-rise 440ms var(--ease-out) calc(140ms - var(--enter-elapsed, 0ms)) backwards;
 }
-.chart svg.is-entering .band-label, .chart svg.is-entering .line-cheapest { animation: fade-in 400ms ease 700ms both; }
-.chart svg.is-entering .now-dot { animation: fade-in 400ms ease 400ms both; }
+.chart svg.is-entering .band-label, .chart svg.is-entering .line-cheapest {
+  animation: fade-in 240ms ease calc(360ms - var(--enter-elapsed, 0ms)) backwards;
+}
+.chart svg.is-entering .now-dot { animation: fade-in 240ms ease calc(200ms - var(--enter-elapsed, 0ms)) backwards; }
 
 @media (prefers-reduced-motion: reduce) {
-  html.js .reveal, html.js .kpis.reveal .tile { animation: fade-in 200ms ease both; }
-  html.js .reveal-scroll { transform: none; transition: opacity 200ms ease; }
-  .chart svg.is-entering .band-cheapest { animation: fade-in 200ms ease both; }
-  .seg-indicator, .theme-toggle .icon, .info-details > summary::after, .answer-details > summary::after { transition: none; }
+  html.js .reveal, html.js .kpis .tile { animation: none; }
+  .chart svg.is-entering .band-cheapest { animation: fade-in 200ms ease backwards; }
+  .chart svg.is-entering .band-label, .chart svg.is-entering .line-cheapest, .chart svg.is-entering .now-dot { animation: none; }
+  .seg-active, .info-details > summary::after, .answer-details > summary::after, .table-details > summary::after { transition: none; }
+  .theme-toggle .icon { transform: none !important; filter: none !important; transition: opacity 150ms ease; }
   .theme-toggle:active, .button:active, .segmented label:active, .answer-details > summary:active,
   .info-details > summary:active, .table-details > summary:active { transform: none; }
+}
+
+/* ---------- Hochkontrast (Forced Colors) ---------- */
+
+@media (forced-colors: active) {
+  .seg-active { forced-color-adjust: none; background: SelectedItem; color: SelectedItemText; }
+  .segmented { border: 1px solid CanvasText; } /* taste-skill-ignore: Hochkontrast braucht Umrisse */
+  /* Legende wie das Diagramm (das seine Farben behält) */
+  .swatch { forced-color-adjust: none; }
+  .answer, .card, .tile, .info-details { border: 1px solid CanvasText; } /* taste-skill-ignore: Hochkontrast braucht Umrisse */
 }
 
 /* ---------- Druck ---------- */
 
 @media print {
+  /* immer helle Farben auf Papier, auch wenn am Bildschirm das dunkle Design aktiv ist */
+  :root, :root:not([data-theme="light"]), :root[data-theme="dark"] {
+    color-scheme: light;
+    --page: #ffffff; --surface: #ffffff; --surface-2: #f1f2f4; --surface-3: #e2e5ea;
+    --ink: #000000; --ink-2: #333333; --muted: #555555;
+    --grid: #dddddd; --axis: #8a8e96; --line-past: #80848c; --line-future: #000000;
+    --past-wash: #f4f5f7; --future-area: rgba(0, 0, 0, 0.06); --band-edge: #b4560f; --focus: #000000;
+  }
   .site-header .theme-toggle, .skip-link, .table-details summary, .chart-readout, .range-picker { display: none !important; }
   .card, .tile, .info-details { break-inside: avoid; }
   body { background: #fff; color: #000; }
-  html.js .reveal, html.js .reveal-scroll { opacity: 1 !important; transform: none !important; animation: none !important; }
+  .answer, .swatch, .chart svg { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html.js .reveal, html.js .kpis .tile, .chart svg * { animation: none !important; }
 }

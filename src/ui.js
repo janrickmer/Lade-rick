@@ -64,7 +64,7 @@ export function formatKnownUntil(ts) {
   return `${formatDateShort(ts - 1)}, ${formatEndTime(ts)} Uhr`;
 }
 
-// ---------- Hero (vergangene 36 h) ----------
+// ---------- Rückblick: günstigstes Fenster der letzten 72 h ----------
 
 /**
  * @param {ReturnType<import('./analysis.js').cheapestSlot>} result
@@ -74,7 +74,7 @@ export function renderHero(result, { now }) {
   const root = $('#hero');
   root.dataset.state = 'ready';
   const empty = $('[data-field="empty"]', root);
-  const lookback = result?.lookbackHours ?? 36;
+  const lookback = result?.lookbackHours ?? config.lookbackHours;
   const rangeLabel = `der letzten ${lookback} h`;
 
   if (!result || !result.slot) {
@@ -129,7 +129,8 @@ export function renderOutlook(upcoming, { now, knownUntil }) {
   const root = $('#outlook');
   root.dataset.state = 'ready';
   const empty = $('[data-field="empty"]', root);
-  setField(root, 'known', knownUntil ? `Bekannte Preise bis ${formatKnownUntil(knownUntil)}.` : '');
+  // nur für Screenreader, direkt nach „keine Prognose.“ – deshalb mit führendem Leerzeichen
+  setField(root, 'known', knownUntil ? ` Bekannte Preise bis ${formatKnownUntil(knownUntil)}.` : '');
   if (!upcoming) {
     setField(root, 'headline', 'Günstigstes 4-Stunden-Fenster');
     setField(root, 'time', '–');
@@ -148,21 +149,37 @@ export function renderOutlook(upcoming, { now, knownUntil }) {
   setTimeWithUnit(setField(root, 'time', w.main), w);
   setField(root, 'note', w.note ? `Fenster über die Zeitumstellung: ${w.note}.` : '');
   setField(root, 'ct', formatCt(upcoming.meanPrice));
-  setField(root, 'mwh', `(≈ ${formatMwh(upcoming.meanPrice)})`);
+  setField(root, 'mwh', `≈ ${formatMwh(upcoming.meanPrice)} · `);
   setChips(root, 'flags', upcoming.meanPrice < 0 ? [{ text: 'negativer Preis', title: NEGATIVE_HINT }] : []);
   // Das kommende Fenster beginnt nie vor „jetzt“ (siehe cheapestUpcomingSlot)
   setField(root, 'starts', `Beginnt ${formatIn(upcoming.start, now)}.`);
 }
 
-/** Uhrzeit groß, die Einheit „Uhr“ kleiner daneben (Textinhalt bleibt „11:00 – 15:00 Uhr“). */
+/**
+ * Uhrzeit groß, die Einheit „Uhr“ kleiner daneben. Beginn und Ende stehen je in einem untrennbaren Teil, damit die
+ * Zeile bei wenig Platz (große Schrift, schmale Geräte) nur zwischen den beiden umbricht. Textinhalt bleibt
+ * „11:00 – 15:00 Uhr“.
+ */
 function setTimeWithUnit(el, w) {
   if (!el) return;
   el.dataset.dst = w.dst ? 'true' : 'false';
-  if (w.dst || !w.main.endsWith(' Uhr')) { el.textContent = w.main; return; }
-  const unit = document.createElement('span');
-  unit.className = 'time-unit';
-  unit.textContent = 'Uhr';
-  el.replaceChildren(`${w.main.slice(0, -4)} `, unit);
+  const m = /^(.+?–)\s(.+)$/u.exec(w.main);
+  if (!m) { el.textContent = w.main; return; }
+  const part = (...children) => {
+    const span = document.createElement('span');
+    span.className = 't-part';
+    span.append(...children);
+    return span;
+  };
+  const end = /^(.+)\sUhr$/u.exec(m[2]);
+  let tail = part(m[2]);
+  if (end) {
+    const unit = document.createElement('span');
+    unit.className = 'time-unit';
+    unit.textContent = 'Uhr';
+    tail = part(`${end[1]}\u00a0`, unit);
+  }
+  el.replaceChildren(part(m[1]), '\u2009', tail);
 }
 
 /** „Am günstigsten laden Sie morgen, Di., 29.09.“ – der Tag, an dem das Fenster beginnt. */
@@ -217,7 +234,7 @@ export function renderKpis({ current, result, now }) {
     setField(cur, 'value', '–');
     setField(cur, 'sub', 'Für den aktuellen Zeitabschnitt liegt kein Preis vor.');
   }
-  const lookback = result?.lookbackHours ?? 36;
+  const lookback = result?.lookbackHours ?? config.lookbackHours;
   for (const [id, point, label] of [['#kpi-min', result?.rangeMin, 'Minimum'], ['#kpi-max', result?.rangeMax, 'Maximum']]) {
     const el = $(id);
     el.dataset.state = 'ready';
@@ -237,7 +254,7 @@ export function renderKpis({ current, result, now }) {
 
 const resolutionLabel = (minutes) => (minutes === 60 ? 'Stundenwerte' : `${minutes}-Minuten-Werte`);
 
-export function renderChartMeta({ points, view, resolutionMinutes, supplements, now }) {
+export function renderChartMeta({ points, view, resolutionMinutes, supplements, upcoming, now }) {
   $('#chart-card').dataset.state = 'ready';
   const lastEnd = points.length ? points[points.length - 1].end : now;
   const xMin = view?.viewStart ?? (points[0]?.start ?? now);
@@ -246,10 +263,25 @@ export function renderChartMeta({ points, view, resolutionMinutes, supplements, 
   const coarser = (supplements ?? []).find((s) => s.resolutionMinutes > resolutionMinutes && s.until > xMin && s.from < xMax);
   if (coarser) resLabel += `, teils ${resolutionLabel(coarser.resolutionMinutes)}`;
   const dayLabel = view?.label ? `${view.label} · ` : '';
-  $('#chart-subtitle').textContent = `${dayLabel}${formatRange(xMin, xMax)} · ${resLabel}`;
+  // Der genaue Datumsbereich steht auch an der x-Achse; am Handy wird er ausgeblendet (.sub-range)
+  const range = document.createElement('span');
+  range.className = 'sub-range';
+  range.textContent = `${formatRange(xMin, xMax)} · `;
+  const res = document.createElement('span');
+  res.className = 'sub-res';
+  res.textContent = resLabel;
+  $('#chart-subtitle').replaceChildren(dayLabel, range, res);
   const hint = $('#range-hint');
-  // Zeitraum und Datum stehen schon im Untertitel; der Hinweis erklärt nur, warum „morgen“ noch fehlt
-  if (hint) hint.textContent = view?.label && !view.tomorrowKnown ? 'Die Preise für morgen erscheinen täglich gegen 13 Uhr.' : '';
+  if (!hint) return;
+  // Zeitraum und Datum stehen schon im Untertitel; der Hinweis erklärt nur, was in der Ansicht fehlt
+  const outside = Boolean(upcoming) && (upcoming.end <= xMin || upcoming.start >= xMax);
+  if (outside) {
+    const word = relativeDayWord(upcoming.start, now);
+    const when = `${word ?? `am ${formatDateShort(upcoming.start)}`}, ${formatTimeRange(upcoming.start, upcoming.end)}`;
+    hint.textContent = `Das günstigste kommende Fenster (${when}) liegt außerhalb dieses Zeitraums.${view?.label === 'Heute' ? ' „2 Tage“ zeigt es.' : ''}`;
+  } else {
+    hint.textContent = view?.label && !view.tomorrowKnown ? 'Die Preise für morgen erscheinen täglich gegen 13 Uhr.' : '';
+  }
 }
 
 /** Name der Hauptquelle (bei einem Snapshot die Originalquelle). */
@@ -295,8 +327,12 @@ export function renderTable({ points, view, cheapest, now }) {
   const rows = points.filter((p) => p.end > xMin && p.start < xMax);
   tbody.replaceChildren();
   const frag = document.createDocumentFragment();
+  let lastDay = null;
   for (const p of rows) {
     const tr = document.createElement('tr');
+    const day = berlinParts(p.start).ymd;
+    // Erste Zeile eines Tages: am Handy steht das Datum nur dort, darunter genügt die Uhrzeit
+    if (day !== lastDay) { tr.classList.add('day-first'); lastDay = day; }
     const marks = [];
     const inCheapest = Boolean(cheapest) && p.start >= cheapest.start && p.start < cheapest.end;
     if (inCheapest) { marks.push('günstigstes kommendes Fenster'); tr.classList.add('row-cheapest'); }
@@ -305,7 +341,14 @@ export function renderTable({ points, view, cheapest, now }) {
     const tdTime = document.createElement('td');
     const time = document.createElement('time');
     time.dateTime = new Date(p.start).toISOString();
-    time.textContent = formatRange(p.start, p.end);
+    if (berlinParts(p.end - 1).ymd === day) {
+      const dayPart = document.createElement('span');
+      dayPart.className = 't-day';
+      dayPart.textContent = `${formatDateShort(p.start)}, `;
+      time.append(dayPart, formatTimeRange(p.start, p.end));
+    } else {
+      time.textContent = formatRange(p.start, p.end);
+    }
     tdTime.appendChild(time);
     const tdCt = document.createElement('td');
     tdCt.className = `num${p.price < 0 ? ' neg' : ''}`;

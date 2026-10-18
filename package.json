@@ -1,7 +1,7 @@
 {
   "name": "laderick",
   "version": "0.1.0",
-  "description": "LadeRick – Börsenstrompreis Deutschland (Day-Ahead, DE-LU) als Chart, mit Berechnung des günstigsten 4-Stunden-Fensters der letzten 36 Stunden.",
+  "description": "LadeRick – Börsenstrompreis Deutschland (Day-Ahead, DE-LU) als Chart, mit Berechnung des günstigsten 4-Stunden-Fensters der letzten 72 Stunden und des günstigsten kommenden Fensters.",
   "private": true,
   "type": "module",
   "engines": {

@@ -114,14 +114,14 @@ function render({ fromCache = false, notBefore = 0 } = {}) {
   ui.renderStartTime(startTime);
   ui.renderOutlook(upcoming, { now, knownUntil });
   ui.renderKpis({ current, result, now });
-  ui.renderChartMeta({ points: series.points, view, resolutionMinutes: series.resolutionMinutes, supplements: series.supplements, now });
+  ui.renderChartMeta({ points: series.points, view, resolutionMinutes: series.resolutionMinutes, supplements: series.supplements, upcoming, now });
   ui.renderSupplementNote(series, now);
   ui.renderTable({ points: series.points, view, cheapest: upcoming, now });
   ui.renderStatusMeta({ series, attempts, now, knownUntil });
   state.chart.update({
     points: series.points,
     now,
-    cheapest: upcoming, // grün im Diagramm: nur das günstigste kommende Fenster
+    cheapest: upcoming, // orange im Diagramm: nur das günstigste kommende Fenster
     range: result.range,
     viewStart: view.viewStart,
     viewEnd: view.viewEnd,
@@ -133,7 +133,7 @@ function render({ fromCache = false, notBefore = 0 } = {}) {
   window.__LADERICK__ = { series, result, upcoming, startTime, current, attempts, now, fromCache, viewDays: state.viewDays, viewStart: view.viewStart, viewEnd: view.viewEnd, viewLabel: view.label, nextLoadAt: state.nextLoadAt };
   document.dispatchEvent(new CustomEvent('laderick:rendered', { detail: window.__LADERICK__ }));
 
-  // Grüne Markierung (Diagramm/Tabelle) und Legende nur, wenn das kommende Fenster im gewählten Zeitraum liegt
+  // Orange Markierung (Diagramm/Tabelle) und Legende nur, wenn das kommende Fenster im gewählten Zeitraum liegt
   const legend = document.getElementById('legend-cheapest');
   if (legend) legend.hidden = !(upcoming && upcoming.end > view.viewStart && upcoming.start < view.viewEnd);
 
@@ -300,12 +300,26 @@ function syncThemeButton() {
   btn.setAttribute('aria-pressed', isDark() ? 'true' : 'false');
 }
 
+/**
+ * Hell/Dunkel springt in einem Zug um: Während des Wechsels sind alle Übergänge aus, sonst blenden einzelne Flächen
+ * (gewählter Zeitraum, Knopf) mit Verzögerung hinterher und stehen kurz in der falschen Farbe.
+ */
+function withoutTransitions(fn) {
+  const root = document.documentElement;
+  root.classList.add('theme-switching');
+  fn();
+  void window.getComputedStyle(document.body).color; // neue Farben anwenden, solange Übergänge aus sind
+  window.requestAnimationFrame(() => window.requestAnimationFrame(() => root.classList.remove('theme-switching')));
+}
+
 function toggleTheme() {
   const next = isDark() ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
+  withoutTransitions(() => {
+    document.documentElement.setAttribute('data-theme', next);
+    syncThemeButton();
+    state.chart?.render();
+  });
   try { window.localStorage.setItem(THEME_KEY, next); } catch { /* ignorieren */ }
-  syncThemeButton();
-  state.chart?.render();
 }
 
 // ---------- Aufklappbare Abschnitte ----------
@@ -317,34 +331,10 @@ function revealTarget(hash, { scroll = false } = {}) {
   try { el = document.getElementById(decodeURIComponent(hash.slice(1))); } catch { return; }
   if (!el) return;
   for (let d = el.closest('details'); d; d = d.parentElement?.closest('details') ?? null) d.open = true;
-  // Ziel eines Sprungs erscheint sofort und ohne Bewegung, damit es an der richtigen Stelle landet
-  for (let r = el.closest('.reveal-scroll'); r; r = r.parentElement?.closest('.reveal-scroll') ?? null) r.classList.add('is-visible', 'is-instant');
   if (scroll) el.scrollIntoView({ block: 'start' });
 }
 
 // ---------- Bewegung ----------
-
-/**
- * Die Teile des Erklär- und Rechtsteils (Überschriften, Absätze, aufklappbare Abschnitte) erscheinen einmal beim
- * Hineinscrollen, gestaffelt in Lesereihenfolge; ohne Observer sofort.
- */
-function setupReveal() {
-  const items = [...document.querySelectorAll('.article > *, .legal > *')];
-  for (const el of items) el.classList.add('reveal-scroll');
-  if (typeof IntersectionObserver !== 'function') { for (const el of items) el.classList.add('is-visible'); return; }
-  const io = new IntersectionObserver((entries) => {
-    let i = 0;
-    for (const entry of entries) {
-      if (!entry.isIntersecting) continue;
-      entry.target.style.transitionDelay = `${Math.min(i, 4) * 70}ms`;
-      entry.target.classList.add('is-visible');
-      io.unobserve(entry.target);
-      i += 1;
-    }
-  }, { rootMargin: '0px 0px -6% 0px', threshold: 0.01 });
-  for (const el of items) io.observe(el);
-  window.addEventListener('beforeprint', () => { for (const el of items) el.classList.add('is-visible'); });
-}
 
 /** Der Zeitraum-Umschalter gleitet bei Zeiger-Bedienung; per Tastatur wechselt er ohne Bewegung. */
 function setupSegmented() {
@@ -367,7 +357,7 @@ function setupSectionLinks() {
     document.addEventListener('laderick:rendered', () => revealTarget(window.location.hash, { scroll: true }), { once: true });
   }
   window.addEventListener('beforeprint', () => {
-    for (const d of document.querySelectorAll('details.info-details')) d.open = true;
+    for (const d of document.querySelectorAll('details.info-details, details.answer-details')) d.open = true;
   });
 }
 
@@ -375,7 +365,6 @@ function setupSectionLinks() {
 
 function init() {
   setupSectionLinks();
-  setupReveal();
   setupSegmented();
   ui.renderOverrideBanner({ nowOverride, sourceOverride });
   const link = document.getElementById('override-link');
@@ -387,7 +376,7 @@ function init() {
   });
 
   document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
-  window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', () => { syncThemeButton(); state.chart?.render(); });
+  window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', () => withoutTransitions(() => { syncThemeButton(); state.chart?.render(); }));
   syncThemeButton();
 
   document.getElementById('retry').addEventListener('click', () => load({ force: true }));

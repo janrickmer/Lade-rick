@@ -8,19 +8,19 @@ gibt dessen ungefähren Durchschnittspreis an. Keine Anmeldung, keine Cookies, k
 
 - **Günstigstes 4-Stunden-Fenster der letzten 72 Stunden** mit Uhrzeiten, Ø-Preis in ct/kWh (und €/MWh) und
   Vergleich zum 72-h-Durchschnitt.
-- **Ausblick** (orange Karte direkt unter dem Diagramm): günstigstes 4-h-Fenster in den bereits veröffentlichten
+- **Ausblick** (orange Karte ganz oben, die Antwort auf „Wann lade ich?“): günstigstes 4-h-Fenster in den bereits veröffentlichten
   Preisen, das noch nicht begonnen hat (frühester Start: nächste volle Viertelstunde; nur dieses Fenster ist im
-  Diagramm grün markiert) (Day-Ahead-Preise für den Folgetag erscheinen täglich gegen 13 Uhr) – klar als „kommend“
+  Diagramm orange markiert) (Day-Ahead-Preise für den Folgetag erscheinen täglich gegen 13 Uhr) – klar als „kommend“
   gekennzeichnet, keine Prognose. Darin aufklappbar der Rückblick „Beste Ladezeit der letzten Tage“: die Uhrzeit, zu der
   ein 4-Stunden-Ladevorgang im Durchschnitt der letzten 72 Stunden am günstigsten begonnen hätte (Mittel über alle Tage
   je Uhrzeit, mindestens zwei vollständige Fenster).
-- **Preisverlauf** ganz oben als SVG-Chart mit wählbarem Zeitraum in Kalendertagen (1 Tag = heute, 2 Tage = heute und
+- **Preisverlauf** direkt darunter als SVG-Chart mit wählbarem Zeitraum in Kalendertagen (1 Tag = heute, 2 Tage = heute und
   morgen, 3 Tage = gestern bis morgen; solange die Preise für morgen noch nicht veröffentlicht sind, rückt der Zeitraum
-  einen Tag zurück), Nulllinie für negative Preise, „Jetzt“-Linie, grün markiertem kommendem Fenster, Tooltip/Ablesezeile,
+  einen Tag zurück), Nulllinie für negative Preise, „Jetzt“-Linie, orange markiertem kommendem Fenster, Tooltip/Ablesezeile,
   Tastaturnavigation, plus Tabellenansicht.
 - **Kennzahlen**: aktueller Börsenpreis, Minimum und Maximum der letzten 72 Stunden.
-- **Reihenfolge der Seite**: Preisverlauf → günstigstes kommendes 4-h-Fenster (orange) → günstigstes 4-h-Fenster der
-  letzten 72 Stunden → Kennzahlen → Erklärtexte. „Datenquellen“, „Impressum“,
+- **Reihenfolge der Seite**: günstigstes kommendes 4-h-Fenster (orange) → Preisverlauf → Kennzahlen (am Desktop neben
+  der orangen Karte) → günstigstes 4-h-Fenster der letzten 72 Stunden → Erklärtexte. „Datenquellen“, „Impressum“,
   „Datenschutz“ und „Haftungsausschluss“ sind aufklappbar; Links wie `#impressum` öffnen den Abschnitt automatisch.
 - **Seriöse Quellen mit Fallback-Kette**: Bundesnetzagentur | SMARD.de → Energy-Charts (Fraunhofer ISE) →
   aWATTar → serverseitiger Zwischenspeicher. Die genutzte Quelle steht mit Lizenz in der Statuszeile.
@@ -71,7 +71,7 @@ werden (Decoupling-Frist 14:20 Uhr).
 4. Der Ausblick verwendet dieselbe Rechnung für Fenster, die noch nicht begonnen haben (Start frühestens zur nächsten
    vollen Viertelstunde, immer echt nach „jetzt“), ohne Näherungs-Fallback. Ergänzte Stundenwerte (aWATTar) gehen
    zeitgewichtet in die Mittelwerte ein; vorhandene Werte der Hauptquelle werden nie ersetzt oder gemischt. Nur dieses kommende Fenster wird im
-   Diagramm grün markiert. Die Seite rechnet kurz vor jeder Viertelstundengrenze für diese Grenze neu, sodass ein
+   Diagramm orange markiert. Die Seite rechnet kurz vor jeder Viertelstundengrenze für diese Grenze neu, sodass ein
    beginnendes Fenster schon vor seinem Start ersetzt wird; ein Sekunden-Wächter rechnet zusätzlich sofort neu, wenn die
    Systemuhr springt (Standby, Zeitkorrektur) oder das angezeigte Fenster begonnen hat. Grundlage ist die Uhr des Geräts.
 
