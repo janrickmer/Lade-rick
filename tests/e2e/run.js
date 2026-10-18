@@ -350,11 +350,14 @@ await scenario('Mobil (360 px): kein horizontales Scrollen, Achsenlabels ohne Ü
   }
   await page.locator('#chart').scrollIntoViewIfNeeded();
   // Ohne Auswahl zeigt die Ablesezeile den aktuellen Preis
-  assert.match(await text(page, '#chart-readout'), /^Jetzt, 14:00 – 14:15 Uhr · .* ct\/kWh$/);
+  assert.match(await text(page, '#chart-readout'), /^Jetzt 14:00–14:15 · .* ct\/kWh$/);
   await page.locator('#chart .hit-area').hover({ position: { x: 150, y: 100 } });
   await page.waitForFunction(() => !document.querySelector('#chart-readout').textContent.startsWith('Jetzt'));
   assert.equal(await page.locator('.chart-tooltip').isVisible(), false);
-  assert.match(await text(page, '#chart-readout'), /Uhr · .* ct\/kWh/);
+  assert.match(await text(page, '#chart-readout'), /^\S+ \d\d:\d\d–\d\d:\d\d · .* ct\/kWh/);
+  // Ablesezeile bleibt einzeilig (kein Sprung des Diagramms)
+  const lh = await page.locator('#chart-readout').evaluate((el) => [el.getBoundingClientRect().height, parseFloat(getComputedStyle(el).lineHeight)]);
+  assert.ok(lh[0] <= lh[1] + 1, `Ablesezeile höher als eine Zeile: ${lh}`);
   await page.screenshot({ path: resolve(SHOTS, 'mobile-light.png'), fullPage: true });
 }, { viewport: { width: 360, height: 780 } });
 
@@ -449,20 +452,54 @@ await scenario('Touch: Tippen auf das Diagramm zeigt den getippten Slot in der A
   await page.locator('#chart').scrollIntoViewIfNeeded();
   const box = await page.locator('#chart .hit-area').boundingBox();
   await page.touchscreen.tap(box.x + 20, box.y + 60);
-  await page.waitForFunction(() => /^So\./.test(document.querySelector('#chart-readout').textContent));
+  await page.waitForFunction(() => /^So\.? /.test(document.querySelector('#chart-readout').textContent));
   const first = await text(page, '#chart-readout');
-  assert.match(first, /^So\., 27\.09\., 0\d:/, first);
+  assert.match(first, /^So\.? 0\d:/, first);
   await page.waitForTimeout(150);
   assert.equal(await text(page, '#chart-readout'), first, 'Auswahl bleibt nach dem Tippen erhalten');
   const box2 = await page.locator('#chart .hit-area').boundingBox();
   await page.touchscreen.tap(box2.x + box2.width - 20, box2.y + 60);
-  await page.waitForFunction(() => /Di\., 29\.09\., (1[0-9]|2[0-3]):/.test(document.querySelector('#chart-readout').textContent));
+  await page.waitForFunction(() => /^Di\.? (1[0-9]|2[0-3]):/.test(document.querySelector('#chart-readout').textContent));
   await page.waitForTimeout(150);
-  assert.match(await text(page, '#chart-readout'), /Di\., 29\.09\., (1[0-9]|2[0-3]):.*kommend/);
+  assert.match(await text(page, '#chart-readout'), /^Di\.? (1[0-9]|2[0-3]):.*kommend/);
   // Tippen außerhalb des Diagramms hebt die Auswahl auf: zurück zum aktuellen Preis
   await page.touchscreen.tap(20, 20);
   await page.waitForFunction(() => document.querySelector('#chart-readout').textContent.startsWith('Jetzt'));
+  // Wischen über ein Neuzeichnen hinweg und Loslassen außerhalb: Das Diagramm reagiert danach weiter auf Tippen
+  const cdp = await page.context().newCDPSession(page);
+  const b = await page.locator('#chart .hit-area').boundingBox();
+  const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+  await touch('touchStart', b.x + 40, b.y + 60);
+  await touch('touchMove', b.x + 80, b.y + 62);
+  await page.evaluate(() => window.dispatchEvent(new Event('focus'))); // löst ein Neuzeichnen aus (neue Trefferfläche)
+  await touch('touchMove', b.x + 120, b.y - 200);
+  await touch('touchEnd');
+  await page.touchscreen.tap(b.x + b.width - 20, b.y + 60);
+  await page.waitForFunction(() => /^Di\.? /.test(document.querySelector('#chart-readout').textContent));
 }, { viewport: { width: 360, height: 780 }, hasTouch: true });
+
+await scenario('Fensterzeit über dem Band bleibt am Handy im Diagramm, auch wenn das Fenster direkt nach „jetzt“ beginnt', async (page) => {
+  // vormittags ohne Preise für morgen: das günstigste Fenster beginnt oft unmittelbar nach „jetzt“
+  for (const iso of ['2026-09-28T08:30:00Z', '2026-09-28T09:00:00Z', '2026-09-28T09:45:00Z', '2026-09-28T10:30:00Z']) {
+    const now = Date.parse(iso);
+    const fixtures = buildFixtureSet({ now });
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await mockSources(page, { fixtures });
+    await page.goto(url(nowParam(now)));
+    await waitForRender(page);
+    const m = await page.evaluate(() => {
+      const svg = document.querySelector('#chart svg').getBoundingClientRect();
+      const lab = document.querySelector('#chart svg .band-label');
+      if (!lab) return null;
+      const l = lab.getBoundingClientRect();
+      const nowLab = document.querySelector('#chart svg .now-label')?.getBoundingClientRect();
+      return { l: l.left, r: l.right, svgL: svg.left, svgR: svg.right, overlap: nowLab ? !(nowLab.right <= l.left || nowLab.left >= l.right) : false };
+    });
+    assert.ok(m, `${iso}: Fensterzeit fehlt`);
+    assert.ok(m.l >= m.svgL - 0.5 && m.r <= m.svgR + 0.5, `${iso}: Fensterzeit ragt aus dem Diagramm (${JSON.stringify(m)})`);
+    assert.equal(m.overlap, false, `${iso}: Fensterzeit überdeckt „jetzt“`);
+  }
+}, { viewport: { width: 360, height: 780 } });
 
 await scenario('Kleines Display (320 px): Kennzahlen bleiben einzeilig, kein Überlauf', async (page) => {
   await mockSources(page, {});

@@ -4,7 +4,8 @@
 
 import { HOUR, MINUTE, currentPoint, floorToResolution } from './analysis.js';
 import {
-  formatCt, formatMwh, formatTime, formatEndTime, formatTimeRange, formatDateShort, formatRange, berlinParts, typographicMinus,
+  formatCt, formatMwh, formatTime, formatEndTime, formatDateShort, formatRange, berlinParts, typographicMinus,
+  isAmbiguousWallTime, formatZone,
 } from './format.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -78,12 +79,20 @@ function shortDayLabel(ts) {
   return `${weekday} ${Number(dd)}.${Number(mm)}.`;
 }
 
-/** „11–15 Uhr“ bzw. „11:15–15:15 Uhr“ – kurze Fensterzeit für die Beschriftung über dem Band. */
+/** „11–15“ bzw. „11:15–15:15“ – kurze Fensterzeit für die Beschriftung über dem Band (ohne „Uhr“). */
 function bandTimeLabel(start, end) {
   const a = formatTime(start);
   const b = formatEndTime(end);
   const whole = a.endsWith(':00') && b.endsWith(':00');
-  return whole ? `${Number(a.slice(0, 2))}–${Number(b.slice(0, 2))}\u00a0Uhr` : `${a}–${b}\u00a0Uhr`;
+  return whole ? `${Number(a.slice(0, 2))}–${Number(b.slice(0, 2))}` : `${a}–${b}`;
+}
+
+const dfWeekdayShort = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', weekday: 'short' });
+
+/** „Di. 11:45–12:00“ – Zeitabschnitt kompakt für die einzeilige Ablesezeile (Zonenkürzel nur in der doppelten Stunde). */
+function compactSlot(p) {
+  const zone = isAmbiguousWallTime(p.start) ? ` ${formatZone(p.start)}` : '';
+  return `${dfWeekdayShort.format(new Date(p.start))} ${formatTime(p.start)}–${formatEndTime(p.end)}${zone}`;
 }
 
 /** Breite eines SVG-Texts; vor dem ersten Layout (oder ohne Layout-Engine) geschätzt. */
@@ -136,10 +145,16 @@ export class PriceChart {
     this.onFocus = this.onFocus.bind(this);
     this.onBlur = this.onBlur.bind(this);
     this.onOutsidePointer = this.onOutsidePointer.bind(this);
+    this.onPointerUp = this.onPointerUp.bind(this);
+    this.onPointerCancel = this.onPointerCancel.bind(this);
     container.addEventListener('keydown', this.onKey);
     container.addEventListener('focus', this.onFocus);
     container.addEventListener('blur', this.onBlur);
     document.addEventListener('pointerdown', this.onOutsidePointer);
+    // Ende einer Fingergeste am Fenster abfangen: Die Trefferfläche wird bei jedem Zeichnen ersetzt (jede Minute),
+    // und der Finger kann außerhalb des Diagramms losgelassen werden.
+    window.addEventListener('pointerup', this.onPointerUp);
+    window.addEventListener('pointercancel', this.onPointerCancel);
 
     if (typeof ResizeObserver === 'function') {
       this.ro = new ResizeObserver(() => this.render());
@@ -172,6 +187,8 @@ export class PriceChart {
     this.container.removeEventListener('focus', this.onFocus);
     this.container.removeEventListener('blur', this.onBlur);
     document.removeEventListener('pointerdown', this.onOutsidePointer);
+    window.removeEventListener('pointerup', this.onPointerUp);
+    window.removeEventListener('pointercancel', this.onPointerCancel);
   }
 
   // ---------- Rendering ----------
@@ -260,7 +277,8 @@ export class PriceChart {
       const bx = Math.max(x(Math.max(cheapest.start, xMin)), nowLineX);
       const bw = Math.max(0, x(Math.min(cheapest.end, xMax)) - bx);
       svgEl('rect', { class: 'band-cheapest', x: bx, y: MARGIN.top, width: bw, height: plotH }, gBand);
-      band = { cx: bx + bw / 2, label: bandTimeLabel(cheapest.start, cheapest.end) };
+      const short = bandTimeLabel(cheapest.start, cheapest.end);
+      band = { cx: bx + bw / 2, label: `${short}\u00a0Uhr`, short };
     }
 
     // Gitter + y-Achse (ganze Zahlen, solange die Schrittweite ganzzahlig ist)
@@ -322,21 +340,39 @@ export class PriceChart {
       const nowLabel = text(gAnno, nx + 6, labelY, 'jetzt', 'now-label');
       const w = textWidth(nowLabel);
       nowBox = { l: nx + 6, r: nx + 6 + w, nx, w, node: nowLabel };
-      if (nowBox.r > plotR) this.placeLeft(nowBox);
+      if (nowBox.r > plotR) this.placeLeft(nowBox, plotL);
       const cur = visible.find((p) => p.start <= now && now < p.end);
       if (cur) svgEl('circle', { class: 'now-dot', r: 5, cx: nx, cy: y(cur.price / 10).toFixed(1) }, gAnno);
     }
     if (band) {
+      // Fensterzeit mittig über dem Band. Stößt sie an „jetzt“, rückt „jetzt“ links neben die Linie und die Fensterzeit
+      // rechts daneben – nie über den rechten Rand des Diagramms hinaus. Reicht der Platz nicht, entfällt erst „Uhr“,
+      // dann das Wort „jetzt“ (Linie, Punkt und Ablesezeile zeigen „jetzt“ weiterhin).
       const node = text(gAnno, 0, labelY, band.label, 'band-label');
-      const w = textWidth(node);
-      let l = Math.min(Math.max(band.cx - w / 2, plotL), plotR - w);
       const gap = 8;
-      if (nowBox && l < nowBox.r + gap && l + w > nowBox.l - gap) {
-        // Kollision mit „jetzt“: „jetzt“ links der Linie, die Fensterzeit rechts davon
-        this.placeLeft(nowBox);
-        if (l < nowBox.r + gap && l + w > nowBox.l - gap) l = nowBox.r + gap;
+      const maxR = width - 2;
+      const hits = (l, w) => Boolean(nowBox) && l < nowBox.r + gap && l + w > nowBox.l - gap;
+      const place = (w) => {
+        let l = Math.min(Math.max(band.cx - w / 2, plotL), plotR - w);
+        if (hits(l, w)) {
+          this.placeLeft(nowBox, plotL);
+          if (hits(l, w)) l = Math.min(nowBox.r + gap, maxR - w);
+        }
+        return l;
+      };
+      let w = textWidth(node);
+      let l = place(w);
+      if (hits(l, w)) {
+        node.textContent = band.short;
+        w = textWidth(node);
+        l = place(w);
       }
-      node.setAttribute('x', l.toFixed(1));
+      if (hits(l, w)) {
+        nowBox.node.remove();
+        nowBox = null;
+        l = Math.min(Math.max(band.cx - w / 2, plotL), maxR - w);
+      }
+      node.setAttribute('x', Math.max(0, l).toFixed(1));
     }
 
     // x-Achse: Uhrzeiten + Tage
@@ -372,8 +408,6 @@ export class PriceChart {
     const hit = svgEl('rect', { class: 'hit-area', x: MARGIN.left, y: MARGIN.top - 6, width: plotW, height: plotH + 6 + MARGIN.bottom }, svg);
     hit.addEventListener('pointerdown', (e) => this.onPointerDown(e));
     hit.addEventListener('pointermove', (e) => this.onPointerMove(e));
-    hit.addEventListener('pointerup', (e) => this.onPointerUp(e));
-    hit.addEventListener('pointercancel', (e) => this.onPointerCancel(e));
     hit.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch' && !this.pinned) this.clearSelection(); });
     hit.addEventListener('click', () => {
       if (this.lastPointerType === 'touch') return; // Finger: Auswahl bleibt nach dem Loslassen ohnehin stehen
@@ -385,8 +419,9 @@ export class PriceChart {
     else this.showDefaultReadout();
   }
 
-  /** „jetzt“ links neben die Jetzt-Linie setzen. */
-  placeLeft(box) {
+  /** „jetzt“ links neben die Jetzt-Linie setzen – nur, wenn es dort noch im Diagramm Platz hat. */
+  placeLeft(box, minL) {
+    if (box.nx - 6 - box.w < minL) return;
     box.node.setAttribute('x', (box.nx - 6).toFixed(1));
     box.node.setAttribute('text-anchor', 'end');
     box.l = box.nx - 6 - box.w;
@@ -474,12 +509,12 @@ export class PriceChart {
     this.tooltip.style.left = `${Math.max(0, left)}px`;
     this.tooltip.style.top = `${Math.max(0, Math.min(cy - 20, this.layout.height - 80))}px`;
 
-    // Ablesezeile (Mobil, höchstens zwei Zeilen; €/MWh stehen in Tooltip und Tabelle) + Screenreader-Ausgabe
+    // Ablesezeile (Mobil, eine Zeile: Tag, Uhrzeit, Preis, Kennzeichen; Langform in Tooltip und Screenreader-Ausgabe)
     if (this.readout) {
       const strong = document.createElement('strong');
       strong.textContent = info.ct;
-      const tags = info.tags.map((t) => (t === CHEAPEST_TAG ? 'günstigstes Fenster' : t));
-      this.readout.replaceChildren(`${info.title} · `, strong, tags.length ? ` · ${tags.join(', ')}` : '');
+      const tags = info.tags.map((t) => (t === CHEAPEST_TAG ? 'günstig' : t));
+      this.readout.replaceChildren(`${compactSlot(p)} · `, strong, tags.length ? ` · ${tags.join(', ')}` : '');
     }
     if (this.output) this.output.textContent = info.text;
   }
@@ -492,7 +527,7 @@ export class PriceChart {
     if (!cur) { this.readout.textContent = '\u00a0'; return; }
     const strong = document.createElement('strong');
     strong.textContent = formatCt(cur.price);
-    this.readout.replaceChildren(`Jetzt, ${formatTimeRange(cur.start, cur.end)} · `, strong);
+    this.readout.replaceChildren(`Jetzt ${formatTime(cur.start)}–${formatEndTime(cur.end)} · `, strong);
   }
 
   clearSelection() {
@@ -517,7 +552,9 @@ export class PriceChart {
     this.pointerFocus = true;
     this.lastPointerType = e.pointerType;
     if (e.pointerType === 'touch') {
-      if (this.touch) return; // weiterer Finger: ignorieren, sonst springt die Auswahl
+      // Weiterer Finger: ignorieren, sonst springt die Auswahl. Ein primärer Finger heißt dagegen, dass keiner mehr
+      // aufliegt – ein übrig gebliebener Gestenzustand ist dann veraltet.
+      if (this.touch && !e.isPrimary) return;
       const prev = this.selected >= 0 ? this.visible[this.selected] : null;
       this.touch = { id: e.pointerId, prevTs: prev ? prev.start : null, prevPinned: this.pinned };
     }
@@ -546,9 +583,9 @@ export class PriceChart {
     if (i >= 0) { this.select(i); this.pinned = prevPinned; } else this.clearSelection();
   }
 
-  /** Tippen oder Klicken außerhalb des Diagramms hebt eine fixierte Auswahl auf. */
+  /** Tippen oder Klicken außerhalb des Diagramms hebt eine Auswahl auf. */
   onOutsidePointer(e) {
-    if (this.pinned && e.target instanceof Node && !this.container.contains(e.target)) this.clearSelection();
+    if (this.selected >= 0 && e.target instanceof Node && !this.container.contains(e.target)) this.clearSelection();
   }
 
   pointAt(e) {

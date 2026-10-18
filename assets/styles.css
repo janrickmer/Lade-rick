@@ -235,6 +235,10 @@ p { margin: 0; }
 
 .status-msg { margin: 12px 4px 0; color: var(--ink-2); min-height: 1.5em; }
 .status-msg:empty { display: none; }
+/* Ladebotschaft nur für Screenreader: Die Karten zeigen den Ladezustand, danach verschiebt sich nichts */
+.status-msg.is-quiet {
+  position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
 
 .card-error { margin-top: 12px; }
 .card-error .card-title { color: var(--critical); }
@@ -251,11 +255,12 @@ p { margin: 0; }
 .card-title { font-size: var(--step-title); }
 .card-sub { margin-top: 4px; color: var(--ink-2); }
 /* Der genaue Datumsbereich steht am Handy schon an der x-Achse */
-@media (max-width: 719.98px) { .sub-range { display: none; } }
+@media (max-width: 719.98px) { .sub-range { display: none; } .chart-head .card-sub { font-size: var(--step-small); } }
 .sub-res { white-space: nowrap; }
 
 /* Raster der oberen Bühne: Handy in Lesereihenfolge, Desktop Antwort neben Kennzahlen, Diagramm darunter */
 .board {
+  container: board / inline-size; /* die Kennzahlen stapeln sich nach verfügbarer Breite in em (große Schrift) */
   display: grid; gap: var(--gap); margin-top: 12px;
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas: "answer" "chart" "kpis" "past";
@@ -326,20 +331,25 @@ p { margin: 0; }
 
 /* ---------- Kennzahlen ---------- */
 
-.kpis { display: grid; gap: var(--gap); grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; }
+.kpis { display: grid; gap: var(--gap); grid-template-columns: minmax(0, 1fr); align-content: start; }
 .tile { background: var(--surface); border-radius: var(--radius-md); padding: 16px 18px; min-width: 0; }
 .tile-current { grid-column: 1 / -1; }
 .tile-label { color: var(--ink-2); }
-.tile-value { margin-top: 2px; font-size: var(--step-value); font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; white-space: nowrap; }
+.tile-value { margin-top: 2px; font-size: var(--step-value); font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; }
+/* Zahl und Einheit bleiben je beisammen; reicht der Platz nicht (große Schrift), rutscht die Einheit darunter */
+.v-part { white-space: nowrap; }
+@container board (min-width: 18.5em) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container board (min-width: 40em) {
+  .kpis { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .tile-current { grid-column: auto; }
+}
 .tile-sub { margin-top: 2px; font-size: var(--step-small); color: var(--muted); }
 .tile-sub:empty { display: none; }
 @media (max-width: 719.98px) {
   .tile-value { font-size: var(--step-title); }
   .tile-current .tile-value { font-size: var(--step-value); }
-}
-@media (min-width: 720px) and (max-width: 959.98px) {
-  .kpis { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); }
-  .tile-current { grid-column: auto; }
 }
 @media (min-width: 960px) {
   /* neben der Antwort gestapelt: Beschriftung, Wert, Unterzeile beisammen; „Jetzt“ trägt den größten Wert */
@@ -350,7 +360,12 @@ p { margin: 0; }
 
 /* ---------- Diagrammkarte ---------- */
 
-.chart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+/* Titel und „Als Tabelle“ in einer Zeile, der Untertitel darunter über die ganze Breite */
+.chart-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: center; }
+.chart-titles { display: contents; }
+.chart-head .card-title { grid-column: 1; grid-row: 1; }
+.chart-head .text-link { grid-column: 2; grid-row: 1; }
+.chart-head .card-sub { grid-column: 1 / -1; grid-row: 2; margin-top: 0; }
 .text-link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; white-space: nowrap; }
 
 .range-picker { border: 0; padding: 0; margin: 16px 0 0; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
@@ -379,17 +394,22 @@ p { margin: 0; }
 .segmented[data-active="2"] .seg-active { clip-path: inset(0 33.333% 0 33.333% round 999px); }
 .segmented[data-active="3"] .seg-active { clip-path: inset(0 0 0 66.667% round 999px); }
 .segmented[data-keyboard="true"] .seg-active { transition: none; }
+/* Druck auf das gewählte Feld: die Aktivfläche gibt sichtbar nach */
+.segmented[data-active="1"]:has(#range-1 + label:active) .seg-active { clip-path: inset(2px calc(66.667% + 2px) 2px 2px round 999px); }
+.segmented[data-active="2"]:has(#range-2 + label:active) .seg-active { clip-path: inset(2px calc(33.333% + 2px) 2px calc(33.333% + 2px) round 999px); }
+.segmented[data-active="3"]:has(#range-3 + label:active) .seg-active { clip-path: inset(2px 2px 2px calc(66.667% + 2px) round 999px); }
 .segmented:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 .range-hint { flex: 1 1 240px; min-width: 0; font-size: var(--step-small); color: var(--muted); }
 .range-hint:empty { display: none; }
 
-/* Ablesezeile (Handy): ohne Auswahl der aktuelle Preis; feste Höhe für zwei Zeilen, damit nichts springt */
+/* Ablesezeile (Handy): ohne Auswahl der aktuelle Preis; immer genau eine Zeile, damit nichts springt */
 .chart-readout {
-  margin-top: 12px; min-height: 3em; color: var(--ink-2);
+  margin-top: 12px; min-height: 1.5em; color: var(--ink-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .chart-readout strong { color: var(--ink); }
 .chart {
-  position: relative; margin-top: 8px; height: 260px; width: 100%;
+  position: relative; margin-top: 8px; height: 244px; width: 100%;
   border-radius: var(--radius-sm); outline-offset: 6px; touch-action: pan-y;
 }
 @media (min-width: 720px) { .chart { height: 340px; } .chart-readout { display: none; } }
@@ -460,9 +480,17 @@ th, td { padding: 8px 14px; text-align: left; border-top: 1px solid var(--grid);
 thead th { position: sticky; top: 0; background: var(--surface-3); border-top: 0; font-weight: 600; }
 td.num, th.num { text-align: right; }
 th:last-child, td:last-child { white-space: normal; min-width: 10ch; }
+.t-mark { display: none; }
 @media (max-width: 419.98px) {
   #price-table { font-size: var(--step-small); }
-  #price-table th:nth-child(3), #price-table td:nth-child(3) { display: none; }
+  /* nur Zeit und ct/kWh; die Markierung steht als Kennzeichen in der Zeitzelle */
+  #price-table th:nth-child(3), #price-table td:nth-child(3),
+  #price-table th:nth-child(4), #price-table td:nth-child(4) { display: none; }
+  #price-table .t-mark {
+    display: inline-block; padding: 0 7px; border-radius: 999px; font-weight: 600; line-height: 1.5;
+    background: var(--surface-3);
+  }
+  #price-table tr.row-cheapest .t-mark { background: var(--orange); color: var(--orange-ink); }
   #price-table th, #price-table td { padding-left: 10px; padding-right: 10px; }
   /* Datum nur in der ersten Zeile eines Tages (eigene Zeile), darunter genügt die Uhrzeit; vorgelesen wird es immer */
   #price-table tr.day-first .t-day { display: block; font-weight: 600; }
@@ -642,6 +670,7 @@ html.js .kpis .tile:nth-child(3) { animation-delay: 170ms; }
     --ink: #000000; --ink-2: #333333; --muted: #555555;
     --grid: #dddddd; --axis: #8a8e96; --line-past: #80848c; --line-future: #000000;
     --past-wash: #f4f5f7; --future-area: rgba(0, 0, 0, 0.06); --band-edge: #b4560f; --focus: #000000;
+    --critical: #c42b2b; --warning-wash: #fdeec9;
   }
   .site-header .theme-toggle, .skip-link, .table-details summary, .chart-readout, .range-picker { display: none !important; }
   .card, .tile, .info-details { break-inside: avoid; }

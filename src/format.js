@@ -63,7 +63,7 @@ export function formatDeltaPercent(value, reference) {
  * @param {number} rangeMean Bereichsmittel
  * @param {{ rangeLabel?: string }} [opts]
  */
-export function formatComparison(meanPrice, rangeMean, { rangeLabel = 'der letzten 36 h' } = {}) {
+export function formatComparison(meanPrice, rangeMean, { rangeLabel = 'der letzten 72 h' } = {}) {
   if (!Number.isFinite(meanPrice) || !Number.isFinite(rangeMean)) return null;
   const diff = meanPrice - rangeMean; // EUR/MWh
   const avg = formatCt(rangeMean);

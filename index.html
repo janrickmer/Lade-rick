@@ -51,7 +51,7 @@
       <a id="override-link" href="./">Zur Live-Ansicht</a>
     </div>
 
-    <p id="status-msg" class="status-msg" role="status" aria-live="polite">Preisdaten werden geladen …</p>
+    <p id="status-msg" class="status-msg is-quiet" role="status" aria-live="polite">Preisdaten werden geladen …</p>
 
     <div id="error-card" class="card card-error" role="alert" hidden>
       <h2 class="card-title">Preisdaten konnten nicht geladen werden</h2>
@@ -92,7 +92,7 @@
             <input type="radio" name="range" id="range-3" value="3" checked><label for="range-3">3&nbsp;Tage</label>
             <span class="seg-active" aria-hidden="true"><span>1&nbsp;Tag</span><span>2&nbsp;Tage</span><span>3&nbsp;Tage</span></span>
           </div>
-          <p class="range-hint" id="range-hint"></p>
+          <p class="range-hint" id="range-hint" role="status"></p>
         </fieldset>
         <p id="chart-readout" class="chart-readout" aria-hidden="true">&nbsp;</p>
         <div id="chart" class="chart" data-ui tabindex="0" role="group" aria-label="Preisverlauf, mit Pfeiltasten navigierbar; Bild auf und ab springen stundenweise, G zum günstigsten Fenster"></div>

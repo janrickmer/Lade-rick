@@ -26,12 +26,12 @@ test('formatDeltaPercent', () => {
 });
 
 test('formatComparison: Prozent nur bei Bereichsmittel ≥ 2 ct/kWh, sonst absolut', () => {
-  assert.equal(formatComparison(68, 94), '28 % günstiger als der Durchschnitt der letzten 36 h (9,4 ct/kWh)');
-  assert.equal(formatComparison(120, 94), '28 % teurer als der Durchschnitt der letzten 36 h (9,4 ct/kWh)');
-  assert.equal(formatComparison(-10, -3), '0,7 ct/kWh unter dem Durchschnitt der letzten 36 h (−0,3 ct/kWh)');
-  assert.equal(formatComparison(-8, 3), '1,1 ct/kWh unter dem Durchschnitt der letzten 36 h (0,3 ct/kWh)');
-  assert.equal(formatComparison(3, 3.2), 'entspricht dem Durchschnitt der letzten 36 h (0,3 ct/kWh)');
-  assert.equal(formatComparison(-6.7, 66.1), '7,3\u00a0ct/kWh unter dem Durchschnitt der letzten 36 h (6,6\u00a0ct/kWh)');
+  assert.equal(formatComparison(68, 94), '28 % günstiger als der Durchschnitt der letzten 72 h (9,4 ct/kWh)');
+  assert.equal(formatComparison(120, 94), '28 % teurer als der Durchschnitt der letzten 72 h (9,4 ct/kWh)');
+  assert.equal(formatComparison(-10, -3), '0,7 ct/kWh unter dem Durchschnitt der letzten 72 h (−0,3 ct/kWh)');
+  assert.equal(formatComparison(-8, 3), '1,1 ct/kWh unter dem Durchschnitt der letzten 72 h (0,3 ct/kWh)');
+  assert.equal(formatComparison(3, 3.2), 'entspricht dem Durchschnitt der letzten 72 h (0,3 ct/kWh)');
+  assert.equal(formatComparison(-6.7, 66.1), '7,3\u00a0ct/kWh unter dem Durchschnitt der letzten 72 h (6,6\u00a0ct/kWh)');
   assert.equal(formatComparison(NaN, 3), null);
   assert.equal(formatComparison(5, 10, { rangeLabel: 'des Zeitraums' }), '0,5 ct/kWh unter dem Durchschnitt des Zeitraums (1,0 ct/kWh)');
 });

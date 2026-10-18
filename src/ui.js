@@ -222,12 +222,27 @@ export function renderStartTime(result) {
 
 // ---------- Kennzahlen ----------
 
+/** „1,2 ct/kWh“ als Zahl und Einheit in je einem untrennbaren Teil – bei großer Schrift bricht die Einheit um. */
+function setValue(root, value) {
+  const el = root.querySelector('[data-field="value"]');
+  if (!el) return;
+  const i = value.lastIndexOf('\u00a0');
+  if (i < 0) { el.textContent = value; return; }
+  const num = document.createElement('span');
+  num.className = 'v-part';
+  num.textContent = value.slice(0, i);
+  const unit = document.createElement('span');
+  unit.className = 'v-part';
+  unit.textContent = value.slice(i + 1);
+  el.replaceChildren(num, ' ', unit);
+}
+
 export function renderKpis({ current, result, now }) {
   const cur = $('#kpi-current');
   cur.dataset.state = 'ready';
   if (current) {
     setField(cur, 'label', `Jetzt (${formatTimeRange(current.start, current.end)})`);
-    setField(cur, 'value', formatCt(current.price));
+    setValue(cur, formatCt(current.price));
     setField(cur, 'sub', `${formatMwh(current.price)}${current.price < 0 ? ' · negativer Preis' : ''}`);
   } else {
     setField(cur, 'label', 'Jetzt');
@@ -240,7 +255,7 @@ export function renderKpis({ current, result, now }) {
     el.dataset.state = 'ready';
     setField(el, 'label', `${label} (${lookback} h)`);
     if (point) {
-      setField(el, 'value', formatCt(point.price));
+      setValue(el, formatCt(point.price));
       setField(el, 'sub', `${formatDateShort(point.start)}, ${formatTime(point.start)} Uhr${point.price < 0 ? ' · negativer Preis' : ''}`);
     } else {
       setField(el, 'value', '–');
@@ -275,13 +290,16 @@ export function renderChartMeta({ points, view, resolutionMinutes, supplements, 
   if (!hint) return;
   // Zeitraum und Datum stehen schon im Untertitel; der Hinweis erklärt nur, was in der Ansicht fehlt
   const outside = Boolean(upcoming) && (upcoming.end <= xMin || upcoming.start >= xMax);
+  let text = '';
   if (outside) {
     const word = relativeDayWord(upcoming.start, now);
     const when = `${word ?? `am ${formatDateShort(upcoming.start)}`}, ${formatTimeRange(upcoming.start, upcoming.end)}`;
-    hint.textContent = `Das günstigste kommende Fenster (${when}) liegt außerhalb dieses Zeitraums.${view?.label === 'Heute' ? ' „2 Tage“ zeigt es.' : ''}`;
-  } else {
-    hint.textContent = view?.label && !view.tomorrowKnown ? 'Die Preise für morgen erscheinen täglich gegen 13 Uhr.' : '';
+    text = `Das günstigste kommende Fenster (${when}) liegt außerhalb dieses Zeitraums.${view?.label === 'Heute' ? ' „2 Tage“ zeigt es.' : ''}`;
+  } else if (view?.label && !view.tomorrowKnown) {
+    text = 'Die Preise für morgen erscheinen täglich gegen 13 Uhr.';
   }
+  // role="status": nur bei Änderung schreiben, sonst würde der Hinweis bei jeder Neuberechnung erneut vorgelesen
+  if (hint.textContent !== text) hint.textContent = text;
 }
 
 /** Name der Hauptquelle (bei einem Snapshot die Originalquelle). */
@@ -333,11 +351,12 @@ export function renderTable({ points, view, cheapest, now }) {
     const day = berlinParts(p.start).ymd;
     // Erste Zeile eines Tages: am Handy steht das Datum nur dort, darunter genügt die Uhrzeit
     if (day !== lastDay) { tr.classList.add('day-first'); lastDay = day; }
-    const marks = [];
+    // Markierung knapp: nur das günstigste Fenster und „jetzt“ (alles danach ist kommend, die Zeile „jetzt“ trennt)
+    let mark = '';
+    let markShort = '';
     const inCheapest = Boolean(cheapest) && p.start >= cheapest.start && p.start < cheapest.end;
-    if (inCheapest) { marks.push('günstigstes kommendes Fenster'); tr.classList.add('row-cheapest'); }
-    if (p.start <= now && now < p.end) { marks.push('jetzt'); tr.classList.add('row-now'); }
-    else if (p.start > now && !inCheapest) marks.push('kommend');
+    if (inCheapest) { mark = 'günstigstes Fenster'; markShort = 'günstig'; tr.classList.add('row-cheapest'); }
+    if (p.start <= now && now < p.end) { mark = 'jetzt'; markShort = 'jetzt'; tr.classList.add('row-now'); }
     const tdTime = document.createElement('td');
     const time = document.createElement('time');
     time.dateTime = new Date(p.start).toISOString();
@@ -350,6 +369,13 @@ export function renderTable({ points, view, cheapest, now }) {
       time.textContent = formatRange(p.start, p.end);
     }
     tdTime.appendChild(time);
+    if (markShort) {
+      // am Handy statt der Spalte „Markierung“ (dort ausgeblendet)
+      const chip = document.createElement('span');
+      chip.className = 't-mark';
+      chip.textContent = markShort;
+      tdTime.append(' ', chip);
+    }
     const tdCt = document.createElement('td');
     tdCt.className = `num${p.price < 0 ? ' neg' : ''}`;
     tdCt.textContent = formatCt(p.price, { decimals: 2, unit: false });
@@ -357,7 +383,7 @@ export function renderTable({ points, view, cheapest, now }) {
     tdMwh.className = 'num';
     tdMwh.textContent = formatMwh(p.price, { decimals: 2, unit: false });
     const tdMark = document.createElement('td');
-    tdMark.textContent = marks.join(', ');
+    tdMark.textContent = mark;
     tr.append(tdTime, tdCt, tdMwh, tdMark);
     frag.appendChild(tr);
   }
@@ -369,8 +395,14 @@ export function renderTable({ points, view, cheapest, now }) {
 
 // ---------- Status ----------
 
-export function setStatusMessage(text) {
+/**
+ * @param {string} text
+ * @param {{ quiet?:boolean }} [opts] quiet: nur für Screenreader (die Ladebotschaft – die Karten zeigen den Ladezustand
+ *   schon, so verschiebt sich nach dem Laden nichts)
+ */
+export function setStatusMessage(text, { quiet = false } = {}) {
   const el = $('#status-msg');
+  el.classList.toggle('is-quiet', quiet);
   if (el.textContent !== text) el.textContent = text ?? '';
 }
 

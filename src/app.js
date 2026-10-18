@@ -249,7 +249,7 @@ function scheduleNextLoad(at) {
 
 async function fetchAndRender(now) {
   ui.setRefreshing(Boolean(state.series));
-  if (!state.series) ui.setStatusMessage('Preisdaten werden geladen …');
+  if (!state.series) ui.setStatusMessage('Preisdaten werden geladen …', { quiet: true });
   const order = sourceOverride ? [sourceOverride] : config.sourceOrder;
   const { series, attempts } = await fetchPrices({
     now,
@@ -377,12 +377,23 @@ function init() {
 
   document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
   window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', () => withoutTransitions(() => { syncThemeButton(); state.chart?.render(); }));
+  // Druck: Diagramm in Druckbreite neu zeichnen (sonst wird die Bildschirmfassung verkleinert), danach zurück
+  window.matchMedia?.('print').addEventListener?.('change', () => state.chart?.render());
+  window.addEventListener('afterprint', () => state.chart?.render());
   syncThemeButton();
 
   document.getElementById('retry').addEventListener('click', () => load({ force: true }));
   syncRangePicker();
   document.getElementById('range-picker').addEventListener('change', (e) => {
     if (e.target?.name === 'range') setDaysChoice(Number(e.target.value));
+  });
+  // Beim Aufklappen der Tabelle steht die Zeile „jetzt“ oben (statt 00:00 Uhr des ersten Tages)
+  document.getElementById('table').addEventListener('toggle', (e) => {
+    if (!e.target.open) return;
+    const wrap = e.target.querySelector('.table-wrap');
+    const row = wrap?.querySelector('tr.row-now');
+    const head = wrap?.querySelector('thead');
+    if (row) wrap.scrollTop = row.offsetTop - (head?.offsetHeight ?? 0);
   });
   document.getElementById('table-link').addEventListener('click', () => {
     const details = document.getElementById('table');

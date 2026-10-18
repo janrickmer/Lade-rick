@@ -1,7 +1,7 @@
 // Zentrale Konfiguration von LadeRick. Keine Geheimnisse, keine Nutzerdaten.
 
 export const config = Object.freeze({
-  /** Länge des Analysezeitraums in Stunden („die vergangenen 36 Stunden“). */
+  /** Länge des Analysezeitraums in Stunden („die vergangenen 72 Stunden“). */
   lookbackHours: 72,
   /** Länge des gesuchten günstigsten Zeitfensters in Stunden. */
   slotHours: 4,
