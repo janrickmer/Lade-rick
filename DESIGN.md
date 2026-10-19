@@ -184,7 +184,7 @@ LadeRick ist eine saubere Energiepreis-App im Standard ihrer Kategorie: ruhige, 
 
 Die Dichte ist die eines Werkzeugs für den kurzen Blick am Handy, das am Desktop zum genauen Lesen der Kurve einlädt. Große Radien, Tonstufen statt Linien und Schatten, runde Bedienelemente und eine einzige Schrift, Hanken Grotesk, mit tabellarischen Ziffern. Bewegung ist knapp und funktional: Die Bühne setzt sich einmal, das Fensterband steigt einmal auf, der Zeitraum-Umschalter gleitet; danach ist die Seite still. Hell und dunkel tragen dieselben Rollen – dunkel ist tiefes Anthrazit –, und die Antwortfläche bleibt in beiden Designs orange mit dunkler Schrift.
 
-Bestätigte Absagen: nicht technisch-kalt wie ein Börsenterminal, nicht werblich wie eine Verkaufsseite. Die Seite trägt derzeit keine Fotos oder Illustrationen; das Bild ist die Kurve. Das ist der Stand der Umsetzung, keine Regel – frei lizenzierte Bilder mit Quellenangabe sind erlaubt, waren beim Bau aber nicht erreichbar, und nichts wurde erfunden.
+Bestätigte Absagen: nicht technisch-kalt wie ein Börsenterminal, nicht werblich wie eine Verkaufsseite. Antwort und Diagramm bleiben bildfrei – dort ist das Bild die Kurve. Im Erklärteil zeigen vier dokumentarische Fotos aus Wikimedia Commons die Welt hinter dem Preis (Windpark, Stromnetz, Wallbox, Solarpark): Tageslicht, Grün und Himmelblau, keine Personen, keine Logos, selbst gehostet und mit Nachweis unter jedem Bild.
 
 **Key Characteristics:**
 - Eine Akzentfarbe, Ladeorange, ausschließlich für das günstigste kommende Fenster und das Markenzeichen.
@@ -346,6 +346,12 @@ Satzüberschrift (Title), darunter die Uhrzeit des Fensters in Display mit klein
 ### Preistabelle
 Aufklappbar unter dem Diagramm; Fläche in heller Tonstufe mit 12 px Radius, fester Kopf in tieferer Tonstufe (600), Zeilen 8 × 14 px mit Trennlinie im Gitterton, Zahlen rechtsbündig. Zeilen des Fensters im Orange-Hauch, die aktuelle Zeile in 700.
 
+### Fotos (Erklärteil)
+- **Ort:** nur im Erklärteil „Was zeigt LadeRick?“, nie in der Antwortfläche, im Diagramm oder bei den Kennzahlen. Eingangsbild über die volle Inhaltsbreite (am Desktop 21:9, am Handy 16:10), danach je Abschnitt höchstens ein Bild in Lesebreite (16:10).
+- **Form:** Radius 18 px wie die Kacheln, kein Rahmen, kein Schatten, kein Verlauf, kein Text auf dem Bild; Hintergrund Tonstufe (#eceef1) bis das Bild geladen ist; feste Breite und Höhe, `loading="lazy"`.
+- **Auswahl:** zeitgenössische Farbfotos aus Deutschland, Tageslicht, eine Familie (Grün, Himmelblau, Raps-Gelb). Keine erkennbaren Personen, keine lesbaren Marken- oder Betreiberlogos, keine Bilder aus Partei- oder Unternehmensquellen (wirkt parteinah oder werblich). Lizenzen nur CC0, gemeinfrei, CC BY oder CC BY-SA.
+- **Nachweis:** Bildunterschrift in Label-Größe (13 px) und Gedämpft (#646872): was und wo, Jahr, dann „Foto: Urheber (Link zur Quelle), Lizenz (Link), via Wikimedia Commons, zugeschnitten“. Die Fußzeile verweist darauf. Kein Hotlinking: Dateien liegen als WebP in `assets/img/` (800/1600 px, Eingangsbild 1200/2400 px).
+
 ### Named Rules
 **Die Einmal-Regel.** Bewegung läuft einmal, beim ersten Zeichnen mit Daten: Die Bühne setzt sich, die Kennzahlen folgen, das Fensterband steigt auf. Minütliche Neuberechnungen und das Umschalten des Designs bleiben still, und jede Bewegung hat einen Pfad für reduzierte Bewegung (keine Verschiebung, kein Druckeffekt, keine Übergänge an Umschalter und Chevrons, Designsymbole nur per Deckkraft).
 
@@ -359,6 +365,7 @@ Aufklappbar unter dem Diagramm; Fläche in heller Tonstufe mit 12 px Radius, fes
 - **Do** Text in hell und dunkel auf mindestens 4,5:1 prüfen, bedeutungstragende Grafik (Kurven, Bandkante, Legendenfelder) auf mindestens 3:1 gegen ihre Fläche.
 - **Do** für jede neue Bewegung einen Pfad bei reduzierter Bewegung vorsehen und nur transform, opacity oder clip-path animieren.
 - **Do** Preise als Stufenlinie mit tabellarischen Ziffern und typografischem Minus zeigen.
+- **Do** Fotos nur im Erklärteil zeigen, dokumentarisch und mit vollständigem Nachweis (Urheber, Lizenz, Quelle, Bearbeitung) direkt unter dem Bild.
 
 ### Don't:
 - **Don't** Orange für Knöpfe, Links, Hover, Fokus, das gewählte Segment oder Statusmeldungen verwenden – Interaktion ist Tinte.
@@ -367,3 +374,4 @@ Aufklappbar unter dem Diagramm; Fläche in heller Tonstufe mit 12 px Radius, fes
 - **Don't** die Kurve glätten oder das Fensterband links der Jetzt-Linie beginnen lassen.
 - **Don't** Werte beim Eingang ein- oder ausblenden oder bei Neuberechnungen erneut animieren; Inhalte sind ab dem ersten Bild lesbar.
 - **Don't** technisch-kalt wie ein Börsenterminal oder werblich wie eine Verkaufsseite werden.
+- **Don't** Fotos in Antwort, Diagramm oder Kennzahlen setzen, Text über Fotos legen, Personen oder Logos zeigen oder Bilder aus Partei- und Unternehmensquellen verwenden.

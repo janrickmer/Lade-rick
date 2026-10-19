@@ -63,7 +63,8 @@ aktueller Preis, Minimum und Maximum. Erfolg heißt: Die Antwort ist in Sekunden
 
 - Echte Live-Preisdaten der genannten Quellen; Rechtstexte (Impressum: Jan-Rickmer Feindt, Schauenburg).
 - Bilder: frei lizenzierte Bilder aus offenen Sammlungen sind erlaubt, mit Quellenangabe auf der Seite; eigene Fotos
-  gibt es bisher nicht.
+  gibt es bisher nicht. Im Einsatz: vier Fotos aus Wikimedia Commons im Erklärteil (Windpark, Stromnetz, Wallbox,
+  Solarpark), Nachweise unter den Bildern und in der README.
 - Keine Nutzerstimmen, Kundenzahlen, Presse oder Auszeichnungen – nichts davon erfinden.
 
 ## Product Principles

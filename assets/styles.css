@@ -564,8 +564,24 @@ td.neg { color: var(--ink); }
 
 /* ---------- Erklärteil (Lesen) ---------- */
 
-.article { margin-top: 72px; max-width: 72ch; }
+.article { margin-top: 72px; }
+.article > :not(.photo-wide) { max-width: 72ch; }
 @media (min-width: 960px) { .article { margin-top: 112px; } }
+
+/* Fotos aus der Welt des Themas (Wikimedia Commons, selbst gehostet): dokumentarisch, ohne Rahmen und Schatten,
+   ein Seitenverhältnis (16:10); nur das Eingangsbild läuft über die ganze Breite (am Desktop 21:9).
+   Nachweis in der Bildunterschrift. */
+.photo { margin: 1.5rem 0 0; }
+.photo img {
+  display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover;
+  border-radius: var(--radius-md); background: var(--surface-2);
+}
+.photo-wide { margin-top: 1.25rem; }
+.photo-wide img { object-position: 40% 55%; }
+@media (min-width: 720px) { .photo-wide img { aspect-ratio: 21 / 9; } }
+.photo figcaption { margin-top: 8px; font-size: var(--step-small); line-height: 1.45; color: var(--muted); }
+.photo figcaption a { color: inherit; }
+.article .photo + h3 { margin-top: 2.5rem; }
 .article-title { font-size: var(--step-value); letter-spacing: -0.025em; }
 .article h3 { margin-top: 2rem; font-size: var(--step-title); }
 .article p { margin-top: 0.75rem; line-height: 1.65; }

@@ -90,6 +90,9 @@ src/chart.js            SVG-Chart ohne Abhängigkeiten
 src/ui.js               DOM-Rendering (Karten, Tabelle, Status)
 src/format.js           de-DE-Formatierung, Europe/Berlin
 src/config.js           Konfiguration (Lookback, Slot, Quellenreihenfolge, Intervalle)
+assets/img/             Fotos für den Erklärteil (WebP, aus Wikimedia Commons, Nachweise unten)
+assets/fonts/           Hanken Grotesk (SIL Open Font License), selbst gehostet
+DESIGN.md               Designsystem (Farben, Schrift, Komponenten, Regeln); .impeccable/design.json maschinenlesbar
 scripts/serve.js        Dev-Server ohne Abhängigkeiten
 scripts/fetch-snapshot.js  erzeugt data/prices.json (GitHub Action)
 tests/unit              node:test
@@ -156,6 +159,29 @@ wieder aktivieren. Schlägt der stündliche Abruf fehl, bleibt der zuvor veröff
 `index.html`. Änderungen an Anschrift oder Kontakt dort pflegen. Nach dem Livegang einmal im Browser prüfen, welche
 Quelle tatsächlich live antwortet (Statuszeile unter den Kennzahlen).
 
+## Gestaltung
+
+Saubere Energiepreis-App: Die Antwort „Wann laden?“ steht oben in der orangen Fläche, die Preiskurve direkt darunter
+zeigt dasselbe Fenster als oranges Band. Hell und dunkel, eine Schrift (Hanken Grotesk), Bewegung knapp und mit
+Rücksicht auf „Bewegung reduzieren“. Alle Regeln, Farbwerte und Komponenten stehen in [`DESIGN.md`](DESIGN.md).
+
 ## Lizenz
 
 MIT (siehe `LICENSE`). Die Preisdaten unterliegen den Lizenzen der jeweiligen Quellen.
+
+**Fotos** (Wikimedia Commons, zugeschnitten und als WebP verkleinert; Nachweis auch unter jedem Bild auf der Seite):
+
+- Windpark Pilsum am Deich in der Krummhörn (2010) – kaʁstn,
+  [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/deed.de),
+  [Quelle](https://commons.wikimedia.org/wiki/File:Krummh%C3%B6rn,_Deich,_2010-06_CN-05.jpg)
+- Hochspannungsleitung bei Häusern im Schwarzwald (2016) – Kreuzschnabel,
+  [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/deed.de),
+  [Quelle](https://commons.wikimedia.org/wiki/File:2016_110-kV-Leitung_H%C3%A4usern_Schwarzabruck.jpg)
+- Wallbox an einem Holzpfosten (2017) – Jakob Härter,
+  [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0/deed.de),
+  [Quelle](https://commons.wikimedia.org/wiki/File:Bettermann_Ladebox_B3200_(35737706894).jpg)
+- Solarpark Wörrstadt (2023) – Matthias Eckert,
+  [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.de),
+  [Quelle](https://commons.wikimedia.org/wiki/File:Solarpark-W%C3%B6rrstadt.jpg)
+
+Die zugeschnittenen Bilddateien in `assets/img/` stehen unter derselben Lizenz wie ihr jeweiliges Original.
